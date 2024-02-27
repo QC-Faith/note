@@ -23,7 +23,7 @@
 
     多个事务之间。相互独立。
 
-    数据库系统提供一定的隔离机制，保证事务在不受外部并发操作影响的“独立”环境执行。即事务处理过程中的中间状态对其它事务是不可见的。
+    数据库系统提供一定的隔离机制，保证事务在不受外部并发操作影响的 “独立” 环境执行。即事务处理过程中的中间状态对其它事务是不可见的。
 
     由基于悲观锁的<font color='Peach'>加锁机制</font>和基于无锁的<font color='Peach'>多版本并发控制MVCC</font>来支持；
 
@@ -54,10 +54,10 @@
     	刷脏页以Page为单位，一个Page上的修改整页都要写；而redo log 只包含真正需要写入的，无效 IO 减少。
     
     binlog
-    bin log 也是写操作并用于数据的恢复，有啥区别呢。
-    	层次：redo log 是 InnoDB 引擎特有的，server 层的叫 binlog(归档日志)
-    	内容：redolog 是物理日志，记录“在某个数据页上做了什么修改”；binlog 是逻辑日志，是语句的原始逻辑，如“给 ID=2 这一行的 c 字段加 1 ”
-    	写入：redolog 循环写且写入时机较多，binlog 追加且在事务提交时写入
+    bin log 也是写操作并用于数据的恢复，与redo log的区别如下：
+    	层次：redo log 是 InnoDB 引擎特有的，binlog 属于 MySQL 的 Service 层
+    	内容：redo log 是物理日志，记录“在某个数据页上做了什么修改”；binlog 是逻辑日志，是语句的原始逻辑，如“给 ID=2 这一行的 c 字段加 1 ”
+    	写入：redo log 循环写且写入时机较多（Log Buffer 空间不足时、事务提交时、后台线程定期Flush），binlog 追加写且在事务提交时写入
     
     binlog 和 redo log
     	对于语句 update T set c=c+1 where ID=2;
@@ -71,7 +71,10 @@
     	先 bin 后 redo : 多了一次事务，恢复后是1。
     ~~~
 
+## 一致性和隔离性的区别
 
+- **一致性**关注于事务执行前后数据库的状态保持一致，一个事务执行完毕后，数据库中的数据应该仍然保持一致，不会因为事务的执行而破坏数据的完整性和约束。
+- **隔离性**关注于多个事务并发执行时，它们之间的相互隔离程度，确保每个事务的执行不会相互影响，从而避免了并发执行可能带来的数据混乱和不一致性。
 
 # 三大日志
 
@@ -87,9 +90,9 @@
 
 ### 刷盘时机
 
-1. ==log buffer空间不足时==：当 `redo log buffer` 占用的空间即将达到 `innodb_log_buffer_size` 一半的时候，后台线程会主动刷盘。
+1. <font color='RedOrange'>**Log Buffer 空间不足时**</font>：当 `redo log buffer` 占用的空间即将达到 `innodb_log_buffer_size` 一半的时候，后台线程会主动刷盘。
 
-2. ==事务提交时==：
+2. <font color='RedOrange'>**事务提交时**</font>：
 
    `InnoDB` 存储引擎为 `redo log` 的刷盘策略提供了 `innodb_flush_log_at_trx_commit` 参数，它支持三种策略：
 
@@ -103,11 +106,11 @@
 
      <img src="https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c49f3d879953430fbf2e8c2ba5d74db5~tplv-k3u1fbpfcp-zoom-in-crop-mark:1512:0:0:0.awebp?" alt="刷盘时机的总结" style="zoom: 67%;" />
 
-3. 后台线程：
+3. <font color='RedOrange'>**后台线程**</font>：
 
    `InnoDB` 存储引擎有一个后台线程，每隔`1` 秒就会把 `redo log buffer` 中的内容写到文件系统缓存（`page cache`），然后调用 `fsync` 刷盘。可以通过变量`innodb_flush_log_at_timeout`来控制后台线程的刷新频率
 
-4. 正常关闭服务器时
+4. <font color='RedOrange'>**正常关闭服务器时**</font>
 
 ### 文件形式
 
