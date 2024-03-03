@@ -1,17 +1,17 @@
 # AbstraceApplicationContext refresh 方法及扩展
 
-==一、prepareRefresh()==
+<font color='Chestnut Red'>**一、prepareRefresh()**</font>
 
 刷新前的准备 加载 PropertySource 可扩展点 `propertySource`
 1、继承/实现 Environment, 并在 customizePropertySources 方法 加入自己想配置的 propertySource
 2、继承 AnnotationConfigServletWebServerApplicationContext 并实现 initPropertySources， 添加自己的 propertySource
 3、在 ApplicationContext refresh 前获取 enviroment，并添加 propertySource
 
-==二、obtainFreshBeanFactory()==
+<font color='Chestnut Red'>**二、obtainFreshBeanFactory()**</font>
 
 获取 beanFactory，没有扩展点
 
-==三、prepareBeanFactory(beanFactory)==
+<font color='Chestnut Red'>**三、prepareBeanFactory(beanFactory)**</font>
 
 准备beanFacoty的配置
 1、指定classLoader
@@ -26,11 +26,11 @@ ApplicationListenerDetector(用于提早发现bean定义的监听器)
 通过以上生命以及代码的声明方式，可以扩展的有
 1、在refresh前，获取beanFactory，并添加beanPostProcessor，这样添加的beanProstProcessor比一般的beanProstProcessor能早处理
 
-==四、postProcessBeanFactory(beanFactory)==
+<font color='Chestnut Red'>**四、postProcessBeanFactory(beanFactory)**</font>
 
 处理beanFactory, 默认什么都没触发
 
-==五、invokeBeanFactoryPostProcessors(beanFactory)==
+<font color='Chestnut Red'>**五、invokeBeanFactoryPostProcessors(beanFactory)**</font>
 
 - 首先初始化并按顺序批次触发所有BeanDefinitionRegistryPostProcessor
 
@@ -46,33 +46,33 @@ ApplicationListenerDetector(用于提早发现bean定义的监听器)
 
 - 然后初始化并按顺序批次**触发**所有**BeanFactoryPostProcessor**， 一样的会被执行多次
 
-==六、registerBeanPostProcessors(beanFactory)==
+<font color='Chestnut Red'>**六、registerBeanPostProcessors(beanFactory)**</font>
 
 注册beanPostProcessor, 即所有BeanPostProcessor的扩展
 
-==七、initMessageSource ()==
+<font color='Chestnut Red'>**七、initMessageSource ()**</font>
 
 初始化国际化相关
 
-==八、initApplicationEventMulticaster()==
+<font color='Chestnut Red'>**八、initApplicationEventMulticaster()**</font>
 
 初始化事件分发相关
 
-==九、onRefresh()==
+<font color='Chestnut Red'>**九、onRefresh()**</font>
 
 默认空实现，ApplicationContext的子类可以实现该方法，做自己特殊bean的初始化等。
 
-==十、registerListeners()==
+<font color='Chestnut Red'>**十、registerListeners()**</font>
 
 注册spring事件监听器，并广播可能的事件。 继承ApplicationListener即可实现自己的监听。
 因为走到这一步，应用已经刷新，**即无法实现**应用启动前，启动中的事件监听。
 spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引导启动流程，能在Spring的启动过程中发出各个事件, 详情请看[spring-boot启动](https://www.jianshu.com/p/301582a9fade)
 
-==十一、finishBeanFactoryInitialization(beanFactory)==
+<font color='Chestnut Red'>**十一、finishBeanFactoryInitialization(beanFactory)**</font>
 
 初始化非延迟实例化的单例
 
-==十二、finishRefresh()==
+<font color='Chestnut Red'>**十二、finishRefresh()**</font>
 
 结束刷新, 对bean生命周期监视。发送刷新完毕事件. 监视存活的bean(MBean)如果有必要
 
@@ -82,19 +82,19 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 快速的构建能力，起步即可依赖，内嵌容器支持，Actuator监控
 
-1. ==快速的构建能力==
+1. <font color='Chestnut Red'>**快速的构建能力**</font>
 
 `SpringBoot`提供了一堆`Starters`用于快速构建项目，它包含了一系列可集成到应用中的依赖包，可直接在`pom`中引用而不用到处去找，例如创建一个`web`项目，只要引入`spring-boot-starter-web`依赖即可。
 
-2. ==起步即可依赖==
+2. <font color='Chestnut Red'>**起步即可依赖**</font>
 
 `SpringBoot` 在新建项目时即可勾选依赖项，在项目初始化时就把相关依赖加进去，你需要数据库就把数据库相关 `starter` 加进去，需要单元测试支持，就把单元测试相关 `starter` 加进去，这样就大大缩短了去查询依赖的时间。
 
-3. ==内嵌容器支持==
+3. <font color='Chestnut Red'>**内嵌容器支持**</font>
 
 `SpringBoot `内嵌了` Tomcat、Jetty、Undertow` 三种容器，也就是说，以往用 `Spring` 构建 `web` 项目还要配置 `Tomcat` 等容器，现在不用了。其默认嵌入的容器是**`Tomcat`** 默认端口是` 8080`
 
-4. ==Actuator 监控==
+4. <font color='Chestnut Red'>**Actuator 监控**</font>
 
 **`SpringBoot` 自带了 `Actuator` 监控功能，主要用于提供对应用程序监控，以及控制的能力**，比如监控应用程序的运行状况，或者内存、线程池、`Http` 请求统计等，同时还提供了关闭应用程序等功能。
 
@@ -271,7 +271,7 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 10. 通过`SpringApplication.setDefaultProperties`指定的默认属性，自己程序代码里设置，优先级最低
 
-==不管内部、外部配置，形成的都是互补配置，都会加载==
+<font color='Chestnut Red'>**不管内部、外部配置，形成的都是互补配置，都会加载**</font>
 
 ## 配置信息读取
 
@@ -324,7 +324,7 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 实现接口 **`ApplicationRunner`** 或者 **`CommandLineRunner`**，并重写其`run `方法。
 
-**`CommandLineRunner`**：启动获取==命令行参数==。
+**`CommandLineRunner`**：启动获取命令行参数。
 
 ```java
 @FunctionalInterface
@@ -338,7 +338,7 @@ public interface CommandLineRunner {
 }
 ```
 
-**`ApplicationRunner`**：启动获取==应用启动的时候参数==。
+**`ApplicationRunner`**：启动获取应用启动的时候参数。
 
 ```java
 @FunctionalInterface
@@ -352,7 +352,7 @@ public interface ApplicationRunner {
 }
 ```
 
-如果启动的时候有多个`ApplicationRunner`和`CommandLineRunner`，==想控制它们的启动顺序==，可以实现 `org.springframework.core.Ordered`接口或者使用 `@Order`注解。
+如果启动的时候有多个`ApplicationRunner`和`CommandLineRunner`，想控制它们的启动顺序，可以实现 `org.springframework.core.Ordered`接口或者使用 `@Order`注解。
 
 **区别**
 
@@ -394,7 +394,7 @@ Spring Boot 自动配置通过预定义的条件（Conditions）来决定是否�
 
 所谓事务的传播行为是指，如果在开始当前事务之前，一个事务上下文已经存在，此时有若干选项可以指定一个事务性方法的执行行为。在`TransactionDefinition`定义中包括了如下几个表示传播行为的常量：
 
-● `Propagation.REQUIRED`：如果当前上下文中存在事务，那么加入该事务，如果不存在事务，创建一个事务，这是默认的传播属性值。==(默认)==
+● `Propagation.REQUIRED`：如果当前上下文中存在事务，那么加入该事务，如果不存在事务，创建一个事务，这是默认的传播属性值。<font color='Chestnut Red'>**(默认)**</font>
 
 ● `Propagation.SUPPORTS`：如果当前上下文存在事务，就加入事务，如果不存在事务，则使用非事务的方式执行。
 
@@ -416,9 +416,9 @@ Spring Boot 自动配置通过预定义的条件（Conditions）来决定是否�
 
 在`Spring`中，事务有两种实现方式
 
-==编程式事务管理：== 编程式事务管理使用`TransactionTemplate`或者直接使用底层的`PlatformTransactionManager`。对于编程式事务管理，`spring`推荐使用`TransactionTemplate`。
+编程式事务管理：编程式事务管理使用`TransactionTemplate`或者直接使用底层的`PlatformTransactionManager`。对于编程式事务管理，`spring`推荐使用`TransactionTemplate`。
 
-==声明式事务管理：== 建立在`AOP`之上的。其本质是对方法前后进行拦截，然后在目标方法开始之前创建或者加入一个事务，在执行完目标方法之后根据执行情况提交或者回滚事务。
+声明式事务管理： 建立在`AOP`之上的。其本质是对方法前后进行拦截，然后在目标方法开始之前创建或者加入一个事务，在执行完目标方法之后根据执行情况提交或者回滚事务。
 
 声明式事务管理不需要入侵代码，通过`@Transactional`就可以进行事务操作，更快捷而且简单。推荐使用
 
@@ -510,7 +510,7 @@ public void add(UserModel userModel) throws Exception {
 
 # 注解区分
 
-1. ==@Configuration 和 @Component 的区别==
+1. <font color='Chestnut Red'>**@Configuration 和 @Component 的区别**</font>
 
 - `@Configuration`: 用于定义配置类，通常与 `@Bean` 注解一起使用，用于声明 bean 的创建和配置信息。配置类中的方法可以包含业务逻辑，同时通过 `@Bean` 注解将方法返回的对象注册为 Spring 容器中的 bean。
 
@@ -520,7 +520,7 @@ public void add(UserModel userModel) throws Exception {
 
   普通的 `@Component` 类（如 `@Service`、`@Repository` 等）在代理方面可以使用 CGLIB，但如果类实现了接口，Spring 也可以使用 JDK 动态代理。选择使用哪种代理方式通常由 Spring 配置中的 `proxyTargetClass` 属性决定。如果 `proxy-target-class` 被设置为 `true`，Spring 将使用 CGLIB 代理；如果设置为 `false` 或省略，Spring 将尽可能使用 JDK 动态代理。
 
-总体而言，`@Configuration` 主要用于配置类，而 `@Component` 则用于普通的 Spring 组件。==`@Configuration` 类内部的 `@Bean` 方法的调用是通过 Spring 容器来管理的，因此 `@Configuration` 类的方法调用会受到 Spring 容器的代理，而 `@Component` 注解的类则直接由 Spring 容器管理==。 `@Configuration` 类的代理方式由 Spring 决定，通常是 CGLIB，但当`@Configuration` 类实现了接口并且目标对象的所有方法都在接口中声明时。可能不会使用 CGLIB，而是使用 JDK 动态代理。
+总体而言，`@Configuration` 主要用于配置类，而 `@Component` 则用于普通的 Spring 组件。<font color='Chestnut Red'>**`@Configuration` 类内部的 `@Bean` 方法的调用是通过 Spring 容器来管理的，因此 `@Configuration` 类的方法调用会受到 Spring 容器的代理，而 `@Component` 注解的类则直接由 Spring 容器管理**</font>。 `@Configuration` 类的代理方式由 Spring 决定，通常是 CGLIB，但当`@Configuration` 类实现了接口并且目标对象的所有方法都在接口中声明时。可能不会使用 CGLIB，而是使用 JDK 动态代理。
 
 例如：
 
@@ -545,7 +545,7 @@ public class MyConfiguration implements MyInterface {
 
 而 `@Component` 类的代理方式则可由配置控制，可选用 CGLIB 或 JDK 动态代理。
 
-2. ==@Repository、@Component、@Service、@Controller之间的区别与联系==
+2. <font color='Chestnut Red'>**@Repository、@Component、@Service、@Controller之间的区别与联系**</font>
 
 `@Component`,`@Service`, `@Controller`, `@Repository`是 Spring 注解，注解后可以被 Spring 框架所扫描并注入到 Spring 容器来进行管理
 `@Component`是通用注解，其他三个注解是这个注解的拓展，并且具有了特定的功能
@@ -553,6 +553,25 @@ public class MyConfiguration implements MyInterface {
 `@Controller`是spring-mvc的注解，具有将请求进行转发，重定向的功能。
 `@Service`是业务逻辑层注解，这个注解只是标注该类处于业务逻辑层。
 用这些注解对应用进行分层之后，就能将请求处理，业务逻辑处理，数据库操作处理分离出来，为代码解耦，也方便了以后项目的维护和开发。
+
+3. @Autowired 和 @Resource
+
+   > 1. **来源**：
+   >    - `@Autowired` 是Spring框架提供的注解，用于进行依赖注入。
+   >    - `@Resource` 是JavaEE（J2EE）规范提供的注解，也可以用于依赖注入，但它不仅可以在Spring中使用，也可以在其他JavaEE容器中使用。
+   > 2. **注入方式**：
+   >    - `@Autowired` 默认按照类型进行注入的，默认情况下它要求依赖对象必须存在，如果允许null值，可以设置它required属性为false。如果找到多个Bean，那么@Autowired会根据名称来查找，如果还有多个Bean，则报出异常。如果想按名称装配，也可以结合@Qualifier注解一起使用。
+   >    - `@Resource` 默认按照名称进行注入，也可以指定type按照类型进行注入。
+   >      - 同时指定 name 和 type，则从 Spring 上下文中找到与它们唯一匹配的 Bean 进行装配，找不到则抛出异常；
+   >      - 指定 name，则从上下文中查找与名称（ID）匹配的 Bean 进行装配，找不到则抛出异常；
+   >      - 指定 type，则从上下文中找到与类型匹配的唯一 Bean 进行装配，找不到或者找到多个就会抛出异常；
+   >      - 既没有指定 name，也没有指定 type，则自动按 byName 方式进行装配。如果没有匹配成功，则仍按照 type 进行匹配；
+   > 3. **容器支持**：
+   >    - `@Autowired` 是Spring特有的注解，只能在Spring容器中使用。
+   >    - `@Resource` 是JavaEE规范提供的注解，在任何JavaEE容器中都可以使用，包括Spring容器。
+   > 4. **可选性**：
+   >    - 在`@Autowired`中，如果找不到匹配的Bean，则注入会失败，会抛出异常。
+   >    - 在`@Resource`中，如果找不到对应的Bean，则会尝试按照名称注入，如果还是找不到，则会注入失败。
 
 # Spring
 
@@ -584,7 +603,7 @@ public class MyConfiguration implements MyInterface {
 
 `Spring AOP`是基于动态代理的，如果要代理的对象实现了某个接口，那么`Spring AOP`就会使用`JDK`动态代理去创建代理对象；而对于没有实现接口的对象，使用`CGlib`动态代理生成一个被代理对象的子类来作为代理。
 
-==区别：==
+<font color='Chestnut Red'>**区别：**</font>
 
 1. `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强.
 
@@ -604,7 +623,7 @@ public class MyConfiguration implements MyInterface {
 
    因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
 
-==应用场景==
+<font color='Chestnut Red'>**应用场景**</font>
 
 - 记录日志(调用方法后记录日志)
 - 监控性能(统计方法运行时间)
@@ -612,7 +631,7 @@ public class MyConfiguration implements MyInterface {
 - 事务管理(调用方法前开启事务，调用方法后提交关闭事务 )
 - 缓存优化(第一次调用查询数据库，将查询结果放入内存对象， 第二次调用，直接从内存对象返回，不需要查询数据库 )
 
-==实现 AOP 的技术，主要分为两大类：==
+<font color='Chestnut Red'>**实现 AOP 的技术，主要分为两大类：**</font>
 
 - 静态代理
 
@@ -635,7 +654,7 @@ public class MyConfiguration implements MyInterface {
     - CGLib 是第三方提供的工具，基于 ASM 实现的，性能比较高；
     - CGLib 无需通过接口来实现，它是针对类实现代理，主要是对指定的类生成一个子类，它是通过实现子类的方式来完成调用的。
 
-==Spring AOP和AspectJ AOP有什么区别？==
+<font color='Chestnut Red'>**Spring AOP和AspectJ AOP有什么区别？**</font>
 
 Spring AOP是属于运行时增强，而AspectJ是编译时增强。Spring AOP基于代理（Proxying），而AspectJ基于字节码操作（Bytecode Manipulation）。
 
@@ -667,23 +686,23 @@ Spring AOP已经集成了AspectJ，AspectJ应该算得上是Java生态系统中�
 
 控制反转是一种设计思想，就是将原本在程序中手动创建对象的控制权，交给`IOC`容器来管理，并由`IOC`容器完成对象的注入。这样可以很大程度上简化应用的开发，把应用从复杂的依赖关系中解放出来。`IOC`容器就像是一个工厂一样，当我们需要创建一个对象的时候，只需要配置好配置文件/注解即可，完全不用考虑对象是如何被创建出来的。
 
-`IoC`的主要实现方式有两种：==依赖查找、依赖注入。==依赖注入是一种更可取的方式。<font color='orange'>实现原理就是工厂模式加反射机制。</font>
+`IoC`的主要实现方式有两种：依赖查找、依赖注入。依赖注入是一种更可取的方式。<font color='orange'>实现原理就是工厂模式加反射机制。</font>
 
 **区别**
 
-==依赖查找，==主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
+依赖查找，主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
 
-==依赖注入，==组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
+依赖注入，组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
 
 **IOC容器**
 
 `IoC`容器：具有依赖注入功能的容器，可以创建对象的容器。`IoC`容器负责实例化、定位、配置应用程序中的对象并建立这些对象之间的依赖。
 
-==依赖注入==：由`IoC`容器动态地将某个对象所需要的外部资源（包括对象、资源、常量数据）注入到组件(`Controller, Service等`）之中。简单点说，就是`IoC`容器会把当前对象所需要的外部资源动态的注入给我们。
+依赖注入：由`IoC`容器动态地将某个对象所需要的外部资源（包括对象、资源、常量数据）注入到组件(`Controller, Service等`）之中。简单点说，就是`IoC`容器会把当前对象所需要的外部资源动态的注入给我们。
 
 ## 循环依赖
 
-结论：==单例模式下属性注入的循环依赖可通过三级缓存处理循环依赖==。下面两种无法解决：
+结论：<font color='Chestnut Red'>**单例模式下属性注入的循环依赖可通过三级缓存处理循环依赖**</font>。下面两种无法解决：
 
 1. 构造器注入的循环依赖：`Spring`处理不了，因为加入`singletonFactories`三级缓存的前提是执行了构造器来创建半成品的对象，所以构造器的循环依赖没法解决。
 2. 非单例循环依赖：无法处理。因为spring容器不缓存`prototype`类型的`bean`，使得无法提前暴露出一个创建中的`bean`。`Spring`容器在获取`prototype`类型的`bean`时，如果因为循环依赖的存在，检测到当前线程已经正在处理该`bean`时，就会抛出异常

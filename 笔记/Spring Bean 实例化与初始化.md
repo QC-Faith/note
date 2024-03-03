@@ -1,8 +1,8 @@
 参考：https://blog.csdn.net/qq_15037231/article/details/105938673
 
-本次通过源码介绍[ApplicationContext](https://so.csdn.net/so/search?q=ApplicationContext&spm=1001.2101.3001.7020)容器初始化流程，==主要介绍容器内bean的实例化和初始化过程==。`ApplicationContext`是`Spring`推出的先进Ioc容器，它继承了旧版本Ioc容器`BeanFactory`，并进一步扩展了容器的功能，增加了`bean`的自动识别、自动初始化等功能，同时引入了`BeanFactoryPostProcessor`、`BeanPostProcessor`等逻辑处理组件，目前我们使用的`Spring`项目大部分都是基于`ApplicationContext`容器的。`ApplicationContext`容器在启动阶段便会调用所有`bean`的构建方法`getBean()`，所以当项目启动好后，容器内所有对象都已被构建好了。
+本次通过源码介绍[ApplicationContext](https://so.csdn.net/so/search?q=ApplicationContext&spm=1001.2101.3001.7020)容器初始化流程，主要介绍容器内bean的实例化和初始化过程。`ApplicationContext`是`Spring`推出的先进Ioc容器，它继承了旧版本Ioc容器`BeanFactory`，并进一步扩展了容器的功能，增加了`bean`的自动识别、自动初始化等功能，同时引入了`BeanFactoryPostProcessor`、`BeanPostProcessor`等逻辑处理组件，目前我们使用的`Spring`项目大部分都是基于`ApplicationContext`容器的。`ApplicationContext`容器在启动阶段便会调用所有`bean`的构建方法`getBean()`，所以当项目启动好后，容器内所有对象都已被构建好了。
 
-==“我个人习惯”将spring容器启动分为三个阶段：（1）容器初始化阶段、（2）Bean实例化(instantiation)阶段、（3）Bean初始化(initialization)阶段。==
+<font color='Chestnut Red'>**我个人习惯将spring容器启动分为三个阶段：（1）容器初始化阶段、（2）Bean实例化(instantiation)阶段、（3）Bean初始化(initialization)阶段。**</font>
 
 1. **容器初始化阶段**：这个阶段主要是通过某些工具类加载`Configuration MetaData`，并将相关信息解析成`BeanDefinition`注册到`BeanDefinitionRegistry`中，即对象管理信息的收集。同时也会进行各种处理器的注册、上下文的初始化、事件广播的初始化等等准备工作。
 2. **Bean实例化(instantiation)阶段**：这个阶段主要是`Bean`的实例化，其实就是`Bean`对象的构造。不过此时构造出的对象，他们内部的依赖对象仍然没有注入，只是通过反射(`或Cglib`)生成了具体对象的实例(执行构造函数)，有点类似于我们手动`new`对象，`new`出的对象已经执行过了构造函数，并且内部的基本数据也已经准备好了，但如果内部还有其他对象的依赖，就需要后续的流程去主动注入。
@@ -42,7 +42,7 @@ Spring容器的启动阶段就介绍到这里，因为具体的逻辑实在实�
 <img src="https://img-blog.csdnimg.cn/20200823200306184.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzE1MDM3MjMx,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述" style="zoom:33%;" />
 
 上面的流程图并不是十分准确，但却把整个bean的构建、使用、销毁流程整体勾勒出来了，实际上Bean的构建流程非常复杂，下面会从源码角度讲解
-![在这里插入图片描述](https://gitee.com/qc_faith/picture/raw/master/image/202212291641424.png)
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/202212291641424.png" alt="在这里插入图片描述" style="zoom:50%;" />
 
 ## Bean的实例化
 
