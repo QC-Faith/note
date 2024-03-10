@@ -36,69 +36,107 @@
 
 <font color='Chestnut Red'>**单机部署**</font>：
 
-- 方案一：SETNX + EXPIRE
-  - SETNX key value，如果 key不存在，则 SETNX 成功返回1，如果 key 已经存在，则返回0。
-  - 但是这个方案中，`setnx`和`expire`两个命令分开了，**「不是原子操作」**。如果执行完`setnx`加锁，正要执行`expire`设置过期时间时，进程**崩溃**或者要重启维护了，那么这个锁就“长生不老”了，**「别的线程永远获取不到」**
+1. <font color='Apricot'>**基于缓存（如Redis）实现**</font>：利用分布式缓存系统（如Redis）的原子性操作，通过SETNX（SET if Not eXists）或者类似的原子操作来实现锁。Redis 还提供了更高级的 SETEX 命令，可以设置锁的过期时间，避免死锁问题。
 
-- 方案二：SETNX + value值是（系统时间+过期时间）
+   1. SETNX + EXPIRE
 
-  - 可以把过期时间放到`setnx`的value值里面。如果加锁失败，再拿出value值校验一下即可。加锁代码如下：
+      - SETNX key value，如果 key不存在，则 SETNX 成功返回1，如果 key 已经存在，则返回0。
+      - 但是这个方案中，`setnx`和`expire`两个命令分开了，**「不是原子操作」**。如果执行完`setnx`加锁，正要执行`expire`设置过期时间时，进程**崩溃**或者要重启维护了，那么这个锁就“长生不老”了，**「别的线程永远获取不到」**
 
-    ~~~java
-    long expires = System.currentTimeMillis() + expireTime; //系统时间+设置的过期时间
-    String expiresStr = String.valueOf(expires);
-    
-    // 如果当前锁不存在，返回加锁成功
-    if (jedis.setnx(key_resource_id, expiresStr) == 1) {
-            return true;
-    } 
-    // 如果锁已经存在，获取锁的过期时间
-    String currentValueStr = jedis.get(key_resource_id);
-    
-    // 如果获取到的过期时间，小于系统当前时间，表示已经过期
-    if (currentValueStr != null && Long.parseLong(currentValueStr) < System.currentTimeMillis()) {
-    
-         // 锁已过期，获取上一个锁的过期时间，并设置现在锁的过期时间（
-        String oldValueStr = jedis.getSet(key_resource_id, expiresStr);
-        if (oldValueStr != null && oldValueStr.equals(currentValueStr)) {
-             // 考虑多线程并发的情况，只有一个线程的设置值和当前值相同，它才可以加锁
-             return true;
-        }
-    }        
-    //其他情况，均返回加锁失败
-    return false;
-    }
-    ~~~
+   2. SETNX + value值是（系统时间+过期时间）
 
-    **缺点**：
+      可以把过期时间放到`setnx`的value值里面。如果加锁失败，再拿出value值校验一下即可。加锁代码如下：
 
-    - 过期时间是客户端自己生成的（System.currentTimeMillis()是当前系统的时间），必须要求分布式环境下，每个客户端的时间必须同步。
-    - 如果锁过期的时候，并发多个客户端同时请求过来，都执行jedis.getSet()，最终只能有一个客户端加锁成功，但是该客户端锁的过期时间，可能被别的客户端覆盖
-    - 该锁没有保存持有者的唯一标识，可能被别的客户端释放/解锁。
+      ~~~java
+      long expires = System.currentTimeMillis() + expireTime; //系统时间+设置的过期时间
+      String expiresStr = String.valueOf(expires);
+      
+      // 如果当前锁不存在，返回加锁成功
+      if (jedis.setnx(key_resource_id, expiresStr) == 1) {
+              return true;
+      } 
+      // 如果锁已经存在，获取锁的过期时间
+      String currentValueStr = jedis.get(key_resource_id);
+      
+      // 如果获取到的过期时间，小于系统当前时间，表示已经过期
+      if (currentValueStr != null && Long.parseLong(currentValueStr) < System.currentTimeMillis()) {
+      
+           // 锁已过期，获取上一个锁的过期时间，并设置现在锁的过期时间（
+          String oldValueStr = jedis.getSet(key_resource_id, expiresStr);
+          if (oldValueStr != null && oldValueStr.equals(currentValueStr)) {
+               // 考虑多线程并发的情况，只有一个线程的设置值和当前值相同，它才可以加锁
+               return true;
+          }
+      }        
+      //其他情况，均返回加锁失败
+      return false;
+      }
+      ~~~
 
-- 方案三：使用Lua脚本(包含SETNX + EXPIRE两条指令)
+      **缺点**：
 
-- 方案四：SET的扩展命令（SET EX PX NX）
+      - 过期时间是客户端自己生成的（System.currentTimeMillis()是当前系统的时间），必须要求分布式环境下，每个客户端的时间必须同步。
+      - 如果锁过期的时候，并发多个客户端同时请求过来，都执行`jedis.getSet()`，最终只能有一个客户端加锁成功，但是该客户端锁的过期时间，可能被别的客户端覆盖
+      - 该锁没有保存持有者的唯一标识，可能被别的客户端释放/解锁。
 
-  > SET key value [EX seconds] [PX milliseconds] [NX|XX]，它也是原子性的
-  >
-  > - NX :表示key不存在的时候，才能set成功，也即保证只有第一个客户端请求才能获得锁，而其他客户端请求只能等其释放锁，才能获取。
-  > - EX seconds :设定key的过期时间，时间单位是秒。
-  > - PX milliseconds: 设定key的过期时间，单位为毫秒
-  > - XX: 仅当key存在时设置值
+   3. 使用Lua脚本(包含SETNX + EXPIRE两条指令)
 
-  **缺点**：
+   4. SET的扩展命令（SET EX PX NX）
 
-  - **「锁过期释放了，业务还没执行完」**。假设线程a获取锁成功，一直在执行临界区的代码。但是100s过去后，它还没执行完。但是，这时候锁已经过期了，此时线程b又请求过来。显然线程b就可以获得锁成功，也开始执行临界区的代码。那么问题就来了，临界区的业务代码都不是严格串行执行的。
-  - **「锁被别的线程误删」**。假设线程a执行完后，去释放锁。但是它不知道当前的锁可能是线程b持有的（线程a去释放锁时，有可能过期时间已经到了，此时线程b进来占有了锁）。那线程a就把线程b的锁释放掉了，但是线程b临界区业务代码可能都还没执行完。
+      > SET key value [EX seconds] [PX milliseconds] [NX|XX]，它也是原子性的
+      >
+      > - NX :表示key不存在的时候，才能set成功，也即保证只有第一个客户端请求才能获得锁，而其他客户端请求只能等其释放锁，才能获取。
+      > - EX seconds :设定key的过期时间，时间单位是秒。
+      > - PX milliseconds: 设定key的过期时间，单位为毫秒
+      > - XX: 仅当key存在时设置值
 
-- 方案五：SET EX PX NX  + 校验唯一随机值，再释放锁
+      **缺点**：
 
-- 方案六：开源框架~Redisson
+      - **「锁过期释放了，业务还没执行完」**。假设线程a获取锁成功，一直在执行临界区的代码。但是100s过去后，它还没执行完。但是，这时候锁已经过期了，此时线程b又请求过来。显然线程b就可以获得锁成功，也开始执行临界区的代码。那么问题就来了，临界区的业务代码都不是严格串行执行的。
+      - **「锁被别的线程误删」**。假设线程a执行完后，去释放锁。但是它不知道当前的锁可能是线程b持有的（线程a去释放锁时，有可能过期时间已经到了，此时线程b进来占有了锁）。那线程a就把线程b的锁释放掉了，但是线程b临界区业务代码可能都还没执行完。
+
+   5. SET EX PX NX  + 校验唯一随机值，再释放锁
+
+2. <font color='Apricot'>**基于Zookeeper实现**</font>：使用 ZooKeeper 提供的临时节点（ephemeral node）特性，通过创建一个临时节点来表示锁的持有。客户端创建临时节点成功的那个将获得锁，其他客户端则监听该节点的删除事件。Zookeeper作为一种高可用的分布式协调服务，相比于Redis分布式锁，Zookeeper分布式锁具有以下优缺点：		
+
+   > 优点：			
+   >
+   > 1. 可以避免锁的失效问题：Zookeeper采用基于ZAB协议的分布式一致性算法，可以保证分布式锁的强一致性，避免因主从同步延迟导致锁失效问题。
+   > 2. 支持更复杂的锁机制：Zookeeper提供了两种锁实现方式：共享锁和排他锁，可以根据具体的业务场景选择最适合的方式。
+   > 3. 可以与其他Zookeeper服务集成：Zookeeper还提供了诸如分布式队列、命名服务等功能，可以与分布式锁一起使用，构建更完整的分布式应用系统。
+   >
+   > 缺点：
+   >
+   > 1. 性能相对较低：Zookeeper采用基于ZAB协议的分布式一致性算法，需要进行多次网络通信和数据同步，相比于Redis分布式锁，性能相对较低。
+   > 2. 部署和维护成本较高：Zookeeper需要部署专门的服务器集群，需要进行一定的配置和维护工作，相比于Redis分布式锁，部署和维护成本较高。
+
+3. <font color='Apricot'>**基于数据库实现**</font>，有两种方式：		
+
+   - 使用数据库的事务性和唯一性约束来实现分布式锁。通过在数据库中插入一条记录或者更新一条记录，利用数据库的唯一性约束来确保只有一个客户端能够成功插入或更新。
+   - 利用数据库的乐观锁机制，通过在记录中添加版本号等字段，实现分布式锁。客户端在获取锁时，检查版本号，成功则获取锁，失败则重试或者放弃。
+
+   > 相比于Redis和Zookeeper分布式锁，MySQL分布式锁具有以下优缺点：
+   >
+   > 优点：
+   >
+   > 1. 易于部署和维护：MySQL已经广泛应用于各种应用场景中，部署和维护相对较为简单。
+   > 2. 支持更复杂的锁机制：MySQL提供了多种锁实现方式，如行锁、表锁、读锁、写锁等，可以根据具体的业务场景选择最适合的方式。
+   >
+   > 缺点：
+   >
+   > 1. 性能较低：MySQL采用基于磁盘的存储方式，相比于Redis和Zookeeper，性能较低。
+   > 2. 可扩展性较差：由于MySQL采用基于磁盘的存储方式，其可扩展性较差，难以应对高并发场景下的锁控制需求。
+   > 3. 存在单点故障问题：MySQL采用主从复制的方式进行数据同步，存在单点故障问题，可能导致锁失效问题。
+
+4. <font color='Apricot'>**开源框架~Redisson**</font>
+
+   > Redisson中有比较成熟的分布式锁的方案，其提供了一个专门用来监控和续期锁的 Watch Dog（ 看门狗），如果操作共享资源的线程还未执行完成的话，Watch Dog 会不断地延长锁的过期时间，进而保证锁不会因为超时而被释放。（默认情况下，每过 10 秒，看门狗就会执行续期操作，将锁的超时时间设置为 30 秒。看门狗续期前也会先判断是否需要执行续期操作，需要才会执行续期，否则取消续期操作，具体是异步续期通过lua脚本操作）
+   >
+   > 可重入锁：一个线程中可以多次获取同一把锁，为每个锁关联一个可重入计数器和一个占有它的线程。Redisson 内置了多种类型的锁比如可重入锁（Reentrant Lock）、自旋锁（Spin Lock）、公平锁（Fair Lock）、多重锁（MultiLock）、 红锁（RedLock）、 读写锁（ReadWriteLock）
 
 <font color='Chestnut Red'>**集群部署**</font>：
 
-- 方案七：多机实现的分布式锁Redlock
+- 多机实现的分布式锁Redlock
 
   - Redlock核心思想是这样的：
 

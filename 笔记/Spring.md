@@ -579,13 +579,13 @@ public class MyConfiguration implements MyInterface {
 
 ### 动态代理
 
-1. jdk动态代理
+1. 基于接口的 JDK 动态代理
 
+JDK 动态代理是利用反射机制生成一个实现代理接口的匿名类，在调用具体方法前调用InvocationHandler 来处理。
 
+2. 基于继承的 CGLib 动态代理
 
-2. cglib动态代理
-
-
+CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载进来，通过修改其字节码生成子类来处理。
 
 ### 静态代理
 
