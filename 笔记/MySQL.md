@@ -1,6 +1,6 @@
 # 事务(ACID)特性
 
- 1. ==原子性 (`Atomicity`)==：
+ 1. <font color='Apricot'>**原子性 (`Atomicity`)：**</font>
 
     是不可分割的最小操作单位，要么同时成功，要么同时失败。由在引擎层生成的<font color='Peach'>Undo log</font>来保证；每一条数据变更（insert/update/delete）操作都伴随一条undo log的生成，并且回滚日志必须先于数据持久化到磁盘上。所谓的回滚就是根据回滚日志做逆向操作
 
@@ -13,13 +13,15 @@
     6. 以update操作为例：当事务执行update时，其生成的undo log中会包含被修改行的主键(以便知道修改了哪些行)、修改了哪些列、这些列在修改前后的值等信息，回滚时便可以使用这些信息将数据还原到update之前的状态。
     ~~~
 
- 2. ==一致性 (`Consistency`)==：
+ 2. <font color='Chestnut Red'>**一致性 (`Consistency`)：**</font>
 
     事务操作前后，数据总量不变；一致性是保证数据库在事务执行前后数据的合法性、完整性和准确性，保持一致的状态，不会因为事务的执行而导致数据不合法、不完整或不准确。
+    
+    ~~~markdown
+    举例来说，如果一个银行转账的操作是一个事务，那么事务的一致性要求转账前后银行账户的总余额应该保持不变，不能因为事务的执行而出现余额不平衡或数据丢失的情况。如果事务执行过程中发生错误或异常，数据库应该回滚到事务开始前的状态，以保证数据的一致性。
+    ~~~
 
-   	举例来说，如果一个银行转账的操作是一个事务，那么事务的一致性要求转账前后银行账户的总余额应该保持不变，不能因为事务的执行而出现余额不平衡或数据丢失的情况。如果事务执行过程中发生错误或异常，数据库应该回滚到事务开始前的状态，以保证数据的一致性。
-
- 3. ==隔离性 (`Isolation`)==：
+ 3. <font color='Apricot'>**隔离性 (`Isolation`)：**</font>
 
     多个事务之间。相互独立。
 
@@ -27,7 +29,7 @@
 
     由基于悲观锁的<font color='Peach'>加锁机制</font>和基于无锁的<font color='Peach'>多版本并发控制MVCC</font>来支持；
 
- 4. ==持久性 (`Durability`)==：
+ 4. <font color='Apricot'>**持久性 (`Durability`)：**</font>
 
     当事务提交或回滚后，数据库会持久化的保存数据。由在引擎层生成的<font color='Peach'>Redo log（`InnoDB`存储引擎独有的）</font>和在<font color='Peach'>Service</font>层生成的<font color='Peach'>Binlog</font>来共同支撑。
 
@@ -130,8 +132,9 @@
 ### 与直接写磁盘的区别
 
 redo log采用的是WAL（Write-ahead logging，预写式日志），所有修改先写入日志，再更新到Buffer Pool，保证了数据不会因MySQL宕机而丢失，从而满足了持久性要求。而且这样做还有两个优点：
-	刷脏页是随机 IO，redo log是顺序 IO
-	刷脏页以Page为单位，大小是`16KB`，一个Page上的修改整页都要写，刷盘比较耗时；而redo log 只包含真正需要写入的（表空间号、数据页号、磁盘文件偏移量、更新值），无效 IO 减少。
+
+- 刷脏页是随机 IO，redo log是顺序 IO
+- 刷脏页以Page为单位，大小是`16KB`，一个Page上的修改整页都要写，刷盘比较耗时；而redo log 只包含真正需要写入的（表空间号、数据页号、磁盘文件偏移量、更新值），无效 IO 减少。
 
 ## Binlog
 
@@ -145,14 +148,14 @@ redo log采用的是WAL（Write-ahead logging，预写式日志），所有修�
 
 `binlog` 日志有三种格式，可以通过`binlog_format`参数指定。
 
-- ==Statement==：<font color='Tasma'>记录`SQL`语句原文</font>，每一条会修改数据的 sql 都会记录在 binlog 中。同步数据时，会执行记录的 `SQL` 语句。
+- <font color='Apricot'>**Statement**</font>：<font color='Tasma'>记录`SQL`语句原文</font>，每一条会修改数据的 sql 都会记录在 binlog 中。同步数据时，会执行记录的 `SQL` 语句。
   - <font color='Peach'>优点</font>：不需要记录每一行的变化，减少了 binlog 日志量，节约了 IO，提高性能。(相比row能节约多少性能与日志量，这取决于应用的SQL情况，正常同一条记录修改或者插入row格式所产生的日志量还小于Statement产生的日志量，但是考虑到如果带条件的update操作，以及整表删除，alter表等操作，ROW格式会产生大量日志，因此在考虑是否使用ROW格式日志时应该跟据应用的实际情况，其所产生的日志量会增加多少，以及带来的IO性能问题。)
   - <font color='Peach'>缺点</font>：可能导致主从不一致，对一些系统函数不能准确复制或是不能复制( 如now()函数， last_insert_id()等)
-- ==Row==：<font color='Tasma'>记录每行数据的变化</font>，保证了数据与原库一致。
+- <font color='Apricot'>**Row**</font>：<font color='Tasma'>记录每行数据的变化</font>，保证了数据与原库一致。
   - <font color='Peach'>优点</font>：日志内容会非常清楚的记录下每一行数据被修改的细节。而且不会出现某些特定情况下存储过程或function，以及trigger的调用和触发器无法被正确复制的问题。
   - <font color='Peach'>缺点</font>：日志量太大了，特别是批量 update、整表 delete、alter 表等操作，由于要记录每一行数据的变化，此时会产生大量的日志，恢复与同步时会更消耗`IO`资源，影响执行速度。
 
-- ==Mixedlevel==：`Statement`和`Row`的混合模式，默认采用`Statement`模式，涉及日期、函数相关的时候采用Row模式，既减少了数据量，又保证了数据一致性。
+- <font color='Apricot'>**Mixedlevel**</font>：`Statement`和`Row`的混合模式，默认采用`Statement`模式，涉及日期、函数相关的时候采用Row模式，既减少了数据量，又保证了数据一致性。
 
 ### 写入时机
 
@@ -187,22 +190,22 @@ redo log采用的是WAL（Write-ahead logging，预写式日志），所有修�
 
 ## Undo Log
 
-`undo log`叫做**回滚日志**，属于`InnoDB`引擎。记录了某条数据变更前的旧数据，同时可以提供多版本并发控制下的读（MVCC），也即非锁定读；当事务需要回滚时，可以通过`undo log`将数据恢复为事务修改前的数据，并且，==回滚日志会先于数据持久化到磁盘上==。这样就保证了即使遇到数据库突然宕机等情况，当用户再次启动数据库的时候，数据库还能够通过查询回滚日志来回滚将之前未完成的事务。所以`InnoDB`擎中使用`undo log`来保证了事务的原子性。
+`undo log`叫做**回滚日志**，属于`InnoDB`引擎。记录了某条数据变更前的旧数据，同时可以提供多版本并发控制下的读（MVCC），也即非锁定读；当事务需要回滚时，可以通过`undo log`将数据恢复为事务修改前的数据，并且，<font color='Chestnut Red'>回滚日志会先于数据持久化到磁盘上</font>。这样就保证了即使遇到数据库突然宕机等情况，当用户再次启动数据库的时候，数据库还能够通过查询回滚日志来回滚将之前未完成的事务。所以`InnoDB`擎中使用`undo log`来保证了事务的原子性。
 
 通常情况下，一条更新语句执行，写入三大日志的顺序为**undo log**>**redo log**>**binlog**。
 
-`MVCC` 的实现依赖于：隐藏字段、Read View、==undo log==
+`MVCC` 的实现依赖于：隐藏字段、Read View、Undo Log
 
 ## 日志写入顺序
 
-==undo log > redo log > binlog==
+<font color='Chestnut Red'>undo log > redo log > binlog</font>
 
 undo:相当于数据修改前的备份
 
 redo: 相当于数据修改后的备份，为了保证事务的持久化,redo会一直写
 
 > 假设有A、B两个数据，值分别为1,2.
-> 事务开始 ==-->== 记录A=1到undo log ==-->== 修改A=3 ==-->== 记录A=3到redo log ==-->== 记录B=2到undo log ==-->== 修改B=4 ==-->== B=4到redo log ==-->== redo log写入磁盘 ==-->== 提交事务写入bin log ==-->== 事务提交完成
+> 事务开始 --> 记录A=1到undo log --> 修改A=3 --> 记录A=3到redo log --> 记录B=2到undo log --> 修改B=4 --> B=4到redo log --> redo log写入磁盘 --> 提交事务写入bin log --> 事务提交完成
 
 <img src="https://gitee.com/qc_faith/picture/raw/master/image/202312192334685.png" alt="image-20220615233733690.png" style="zoom: 33%;" />
 
@@ -210,7 +213,7 @@ redo: 相当于数据修改后的备份，为了保证事务的持久化,redo会
 
 死锁是指两个或多个事务在同一资源上相互占用，并请求锁定对方的资源，从而导致恶性循环的现象。
 
-==死锁的必要条件：==
+<span style="background:#f9eda6;">死锁的必要条件</span>：
 
 （1） 互斥条件：一个资源每次只能被一个进程使用。 
 
@@ -220,7 +223,7 @@ redo: 相当于数据修改后的备份，为了保证事务的持久化,redo会
 
 （4） 循环等待条件：若干进程之间形成一种头尾相接的循环等待资源关系。
 
-==解除死锁的方案：==
+<span style="background:#f9eda6;">解除死锁的方案</span>：
 
 在数据库层面，有两种策略通过 <font color='Magenta'>打破循环等待条件</font> 来解除死锁状态
 
@@ -245,7 +248,7 @@ redo: 相当于数据修改后的备份，为了保证事务的持久化,redo会
 >
 >4：杀死进程：kill 线程ID
 
-==避免死锁的方法：==
+<span style="background:#f9eda6;">避免死锁的方法</span>：
 
 1. 操作多张表时，尽量以相同的顺序来访问（避免形成等待环路) 
 
