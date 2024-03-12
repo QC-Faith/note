@@ -82,3 +82,7 @@ ABA问题：添加标志位
 
 *ConcurrentHashMap 在put中野使用了cas，CAS 操作尝试添加新的节点
 
+
+
+ConcurrentHashMap 中的每个节点都包含一个版本号，该版本号就是为了解决aba问题
+
