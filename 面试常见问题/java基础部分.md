@@ -105,7 +105,13 @@ hashmap通过控制容量都为2的幂次方保证了取模不会超出容量
 
 ##### 线程安全的HashMap
 
-ConcurrentHashMap  使用segMent分段锁，每个锁就锁16个数组，使用了cas中的ReentrantLock，ReadWriteLock进行实现，锁的粒度小所以性能好
+ConcurrentHashMap  
+
+
+使用segMent分段锁，每个锁就锁16个数组，使用了cas中的ReentrantLock，ReadWriteLock进行实现，锁的粒度小所以性能好
+
+1.8之后的实现方式
+使用cas锁在bucket上
 
 
 
