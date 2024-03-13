@@ -216,7 +216,7 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 `SpringBoot`的核心注解是`@SpringBootApplication`，可以看作是 `@Configuration`、`@EnableAutoConfiguration`、`@ComponentScan` 注解的集合。
 
-- `@EnableAutoConfiguration`：启用 SpringBoot 的自动配置机制
+- `@EnableAutoConfiguration`：打开自动配置的功能，也可以关闭某个自动配置的选项，如关闭数据源自动配置功能
 - `@ComponentScan`： 扫描被`@Component` (`@Service`,`@Controller`)注解的 bean，注解默认会扫描该类所在的包下所有的类。
 - `@Configuration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类
 
@@ -306,8 +306,6 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
    - 通过注解`ConfigurationProperties`来制定配置的前缀
    - 通过`Bean`的属性名，补上前缀，来完整定位配置信息的`Key`，并获取`Value`赋值给这个`Bean`
 
-
-
 ##常用的stater。如何理解stater
 
 `spring-boot-starter-web `
@@ -361,16 +359,13 @@ public interface ApplicationRunner {
 
 ## 自动配置原理
 
-Spring Boot 自动配置通过预定义的条件（Conditions）来决定是否应该自动配置某个组件。当满足特定条件时，自动配置将生效。
+Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。Spring Boot通过条件化配置（Conditional Configuration）和SPI（Service Provider Interface）机制，实现了一种基于约定优于配置的自动化配置策略。
 
-原理主要涉及以下几个方面：
-
-1. <font color='RedOrange'>条件注解（@Conditional）</font>： Spring Boot 使用条件注解来根据一定的条件判断是否应该应用自动配置。常见的条件注解有 @ConditionalOnClass、@ConditionalOnMissingClass、@ConditionalOnProperty 等，它们根据类的存在性、属性的存在与否等条件来进行判断。
-2. <font color='RedOrange'>自动配置类（@Configuration）</font>： Spring Boot 的自动配置通常是通过 @Configuration 注解的配置类实现的。这些配置类中包含了需要自动配置的组件的定义，以及一些条件判断。这些配置类会在应用启动时被扫描到，从而生效。
-3. <font color='RedOrange'>spring.factories 文件</font>： Spring Boot 使用 spring.factories 文件来指定需要加载的自动配置类。该文件位于 META-INF 目录下，其中定义了各种自动配置类的完整类名。
-4. @EnableAutoConfiguration 注解： 在 Spring Boot 主类上通常会添加 @EnableAutoConfiguration 注解，该注解包含 @Import(AutoConfigurationImportSelector.class)，通过导入 AutoConfigurationImportSelector 类，实现加载 spring.factories 文件中定义的自动配置类。
-
-总体而言，Spring Boot 自动配置的核心机制就是在应用启动时，根据条件判断加载相应的配置类，从而自动配置应用的各个组件。这种机制大大简化了应用的配置过程，让开发者更专注于业务逻辑的实现而不必过多关注配置细节。
+1. **@EnableAutoConfiguration注解：** Spring Boot应用中通常会在启动类上使用`@SpringBootApplication`注解，而`@SpringBootApplication`注解本身包含了`@EnableAutoConfiguration`注解。`@EnableAutoConfiguration`注解是Spring Boot的关键注解之一，它启用了Spring Boot的自动配置机制。
+2. **@Conditional注解：** Spring Boot中的很多自动配置类都使用了条件注解（`@Conditional`）进行条件判断。条件注解允许根据满足一定条件的情况来决定是否应用某个配置。
+3. **spring.factories文件：** Spring Boot的自动配置信息通常是通过`META-INF/spring.factories`文件中的配置来定义的。这个文件位于项目的classpath下，其中包含了各种自动配置类的配置信息。每个自动配置类都会在`spring.factories`中定义一个`EnableAutoConfiguration`的键，指向该自动配置类的类路径。
+4. **SPI机制：** Spring Boot利用了Java的SPI（Service Provider Interface）机制。在`spring.factories`文件中，配置了各种自动配置类对应的`EnableAutoConfiguration`实现类。Spring Boot在启动时，会通过SPI机制加载这些实现类，并进行相应的自动配置。
+5. **自动配置类：** 自动配置类通常包含了一些`@Configuration`注解和`@Conditional`注解，以及各种`@Bean`定义。这些自动配置类的目的是根据条件判断是否需要自动配置一些Bean，以及如何配置这些Bean。
 
 #事务
 
@@ -603,25 +598,23 @@ CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载
 
 `Spring AOP`是基于动态代理的，如果要代理的对象实现了某个接口，那么`Spring AOP`就会使用`JDK`动态代理去创建代理对象；而对于没有实现接口的对象，使用`CGlib`动态代理生成一个被代理对象的子类来作为代理。
 
-<font color='Chestnut Red'>**区别：**</font>
+<font color='Chestnut Red'>**`JDK`动态代理与`CGlib`动态代理的区别：**</font>
 
-1. `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强.
-
-2. 它生成类的速度很快，但是运行时因为是基于反射，调用后续的类操作会很慢.
-
-3. 而且他是只能针对接口编程的.
-
-
-
-1. `CGLIB`是基于继承机制，继承被代理类，所以方法不要声明为`final`，然后重写父类方法达到增强了类的作用.
-
-2. 它底层是基于`asm`第三方框架，是对代理对象类的`class`文件加载进来，通过修改其字节码生成子类来处理.
-
-3. 生成类的速度慢，但是后续执行类的操作时候很快.
-
-4. 可以针对类和接口.
-
-   因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
+> 1. `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强.
+>
+> 2. 它生成类的速度很快，但是运行时因为是基于反射，调用后续的类操作会很慢.
+>
+> 3. 而且他是只能针对接口编程的.
+>
+> 1. `CGLIB`是基于继承机制，继承被代理类，所以方法不要声明为`final`，然后重写父类方法达到增强了类的作用.
+>
+> 2. 它底层是基于`asm`第三方框架，是对代理对象类的`class`文件加载进来，通过修改其字节码生成子类来处理.
+>
+> 3. 生成类的速度慢，但是后续执行类的操作时候很快.
+>
+> 4. 可以针对类和接口.
+>
+>    因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
 
 <font color='Chestnut Red'>**应用场景**</font>
 
@@ -633,18 +626,14 @@ CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载
 
 <font color='Chestnut Red'>**实现 AOP 的技术，主要分为两大类：**</font>
 
-- 静态代理
+- 静态代理：指使用 AOP 框架提供的命令进行编译，从而在编译阶段就可生成 AOP 代理类，因此也称为编译时增强； 
 
-   \- 指使用 AOP 框架提供的命令进行编译，从而在编译阶段就可生成 AOP 代理类，因此也称为编译时增强； 
-
-  - 编译时编织（特殊编译器实现）
+   - 编译时编织（特殊编译器实现）
   - 类加载时编织（特殊的类加载器实现）。
+  
+- 动态代理：运行时在内存中“临时”生成 AOP 动态代理类，因此也被称为运行时增强。 
 
-- 动态代理
-
-   \- 运行时在内存中“临时”生成 AOP 动态代理类，因此也被称为运行时增强。 
-
-  - JDK 动态代理 
+   - JDK 动态代理 
     - JDK Proxy 是 Java 语言自带的功能，无需通过加载第三方类实现；
     - Java 对 JDK Proxy 提供了稳定的支持，并且会持续的升级和更新，Java 8 版本中的 JDK Proxy 性能相比于之前版本提升了很多；
     - JDK Proxy 是通过拦截器加反射的方式实现的；
@@ -739,10 +728,9 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 
 ##依赖注入（DI）
 
-  依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
+依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
 
-**`IoC` 和 `DI` 的关系**
-  `IoC` 是 `Spring` 中一个极为重要的概念，而 `DI` 则是实现 `IoC` 的方法和手段。
+**`IoC` 和 `DI` 的关系**： `DI` 是实现 `IoC` 的方法和手段。
 
 **`Spring`依赖注入方式**
 
@@ -750,7 +738,7 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 - set注入方式
 - 构造器注入方式
 
-推荐使用==基于注解注入方式，配置较少，比较方便==。
+推荐使用<font color='Chestnut Red'>基于注解注入方式，配置较少，比较方便</font>。
 
 ## Bean的作用域
 
@@ -764,29 +752,25 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 
 在Spring框架中，`FactoryBean`和`BeanFactory`都是用于创建和管理对象的接口，但它们的职责不同。
 
-1. ==BeanFactory==
+1. **BeanFactory**
 
-`BeanFactory`：管理Bean的容器，是所有 Spring Bean 容器的顶级接口，它为 Spring 的容器定义了一套规范，并提供像 `getBean` 这样的方法从容器中获取指定的 `Bean` 实例。`BeanFactory` 在产生 `Bean` 的同时，还提供了解决 `Bean` 之间的依赖注入的能力。
+   > `BeanFactory`：管理Bean的容器，是所有 Spring Bean 容器的顶级接口，它为 Spring 的容器定义了一套规范，并提供像 `getBean` 这样的方法从容器中获取指定的 `Bean` 实例。`BeanFactory` 在产生 `Bean` 的同时，还提供了解决 `Bean` 之间的依赖注入的能力。
+   >
+   > `BeanFactory`它的主要功能是通过`Bean`的名称获取`Bean`的实例对象。`BeanFactory`可以通过`XML`配置文件、注解、`Java`代码等方式来定义`Bean`，可以根据需要动态地加载和卸载`Bean`，也可以为`Bean`提供各种定制化配置。
 
-`BeanFactory`它的主要功能是通过`Bean`的名称获取`Bean`的实例对象。`BeanFactory`可以通过`XML`配置文件、注解、`Java`代码等方式来定义`Bean`，可以根据需要动态地加载和卸载`Bean`，也可以为`Bean`提供各种定制化配置。
+2. **FactoryBean**
 
-1. ==FactoryBean==
-
-`FactoryBean`是一个创建`Bean`的工厂接口，主要的功能是动态生成某一个类型的 `Bean` 的实例，也就是说，我们可以自定义一个 `Bean` 并且加载到 `IOC` 容器里面。 它里面有一个重要的方法叫` getObject()`，这个方法里面就是用来实现动态构建 `Bean` 的过程。`Spring Cloud` 里面的 `OpenFeign` 组件，客户端的代理类，就是使用了 `FactoryBean` 来实现的。
-
-`FactoryBean`需要实现`getObject()`方法，该方法返回创建的`Bean`对象实例。它还可以实现`getObjectType()`方法，该方法返回创建的`Bean`对象的类型。这使得`FactoryBean`可以创建不同类型的`Bean`实例，并且可以根据需要动态地切换`Bean`实现。
-
-> 通过 getBean()方法返回的不是FactoryBean本身，而是调用FactoryBean#getObject()方法所返回的对象，相当于FactoryBean#getObject()代理了getBean()方法。如果想得到FactoryBean必须使用 '&' + beanName 的方式获取。
-
-------
-
-
+   > `FactoryBean`是一个创建`Bean`的工厂接口，主要的功能是动态生成某一个类型的 `Bean` 的实例，也就是说，我们可以自定义一个 `Bean` 并且加载到 `IOC` 容器里面。 它里面有一个重要的方法叫` getObject()`，这个方法里面就是用来实现动态构建 `Bean` 的过程。`Spring Cloud` 里面的 `OpenFeign` 组件，客户端的代理类，就是使用了 `FactoryBean` 来实现的。
+   >
+   > `FactoryBean`需要实现`getObject()`方法，该方法返回创建的`Bean`对象实例。它还可以实现`getObjectType()`方法，该方法返回创建的`Bean`对象的类型。这使得`FactoryBean`可以创建不同类型的`Bean`实例，并且可以根据需要动态地切换`Bean`实现。
+   >
+   > > 通过 getBean()方法返回的不是FactoryBean本身，而是调用FactoryBean#getObject()方法所返回的对象，相当于FactoryBean#getObject()代理了getBean()方法。如果想得到FactoryBean必须使用 '&' + beanName 的方式获取。
 
 ## Bean生命周期
 
 <img src="https://gitee.com/qc_faith/picture/raw/master/image/202401011959001.png" alt="image-20240101195915933" style="zoom: 40%;" />
 
-==Bean的完整生命周期经历了各种方法调用，这些方法可以划分为以下几类：==
+Bean的完整生命周期经历了各种方法调用，这些方法可以划分为以下几类：
 
 - <font color='Apricot'>Bean自身的方法</font>： 包括Bean本身调用的方法及`init-method`和`destroy-method`指定的方法
 - <font color='Apricot'>Bean级生命周期接口方法</font>： 这个包括了`BeanNameAware`、`BeanFactoryAware`、`ApplicationContextAware`；当然也包括`InitializingBean`和`DiposableBean`这些接口的方法（可以被`@PostConstruct`和`@PreDestroy`注解替代)
@@ -834,10 +818,6 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 - 如果 Bean 实现了 `DisposableBean` 接口，则 `Spring` 会调用 `destory()` 方法将 `Spring` 中的 `Bean` 销毁；(或者有执行`@PreDestroy`注解的方法)
 
 - 如果在配置文件中通过 <font color='RedOrange'>destory-method</font> 属性指定了 `Bean` 的销毁方法，则 `Spring` 将调用该方法对 `Bean` 进行销毁。
-
-------
-
-
 
 ## 面试题
 
