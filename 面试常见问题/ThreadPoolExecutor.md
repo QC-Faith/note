@@ -103,9 +103,8 @@ CallerRunsPolicy
 
 通过原子性整数控制当前的线程状态
 
+
 RUNNING（运行）、SHUTDOWN（关闭中）、STOP（停止）、TERMINATED（终止）等
-
-
 
 BlockingQueue通过可重入锁来实现，使用的就是aqs的reentranLock
 
