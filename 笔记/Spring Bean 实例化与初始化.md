@@ -1347,4 +1347,4 @@ jdk动态代理和cglib创建动态代理的区别如下：
 有了上面的基础知识后，我们就可以分析为什么在使用@Async注解时无法支持循环依赖了。
 假设对象A使用@Aysnc注解且和对象B存在循环依赖：对象A实例化后进行依赖注入时，发现自己依赖对象B，就会通过getBean(B)获取对象B。由于对象B尚未构建，就开始构建对象B，对象B实例化后注入依赖时发现依赖对象A，同样通过getBean(A)获取对象A。**这时返回给对象B的是尚未注入依赖且还没有代理的对象A。** 对象B在构建完成会将引用返回给对象A，对象A继续进行构建，在完成所有的依赖注入且执行完初始化方法后，会执行动态代理逻辑，这时@Aysnc代理实现类AsyncAnnotationBeanPostProcessor **为对象A生成了代理对象**并将代理对象作为最终对象返回。这时就会**导致最终生成的【代理后对象A】和对象B依赖的【原生对象A】并不是同一个对象**，这种情况下Spring会抛出异常。
 由于普通切面代理实现类AnnotationAwareAspectJAutoProxyCreator做了些特殊的处理，所以不会出现上述问题。具体实现逻辑可以参照下面的时序图。
-![在这里插入图片描述](https://gitee.com/qc_faith/picture/raw/master/image/202212291649734.png)
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/202212291649734.png" alt="在这里插入图片描述" style="zoom:50%;" />

@@ -371,37 +371,33 @@ Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。S
 
 ## @Transactional注意事项
 
-● `Spring`默认情况会对`(RuntimeException)`及其子类来进行回滚，在遇见`Exception`及其子类的时候则不会进行回滚操作。
-● `@Transactional`注解只能被应用到`public`方法上，这是由`Spring Aop`本质决定的。
+Java中异常的基类为Throwable，有两个子类Exception与Errors。RuntimeException就是Exception的子类，只有RuntimeException才会进行回滚；
+
+- `Spring`默认情况会对`(RuntimeException)`及其子类来进行回滚，在遇见`Exception`或者`Checked`异常(`ClassNotFoundException/NoSuchMetodException`)的时候则不会进行回滚操作。要求我们在自定义异常的时候，让自定义的异常继承自RuntimeException，这样抛出的时候才会被Spring默认的事务处理准确处理。
+- `@Transactional`注解只能被应用到`public`方法上，这是由`Spring Aop`本质决定的。
 
 ##@Transactional注解属性含义
 
-● `propagation`: 设置可选的事务传播行为
-● `isolation`: 可选的事务隔离级别设置
-● `readOnly`: 读写或只读事务，默认读写
-● `timeout`: 事务超时时间设置
-● `rollbackFor`: 导致事务回滚的异常类数组
-● `rollbackForClassName`: 导致事务回滚的异常类名称数组
-● `noRollbackFor`: 不会导致事务回滚的异常类数组
-● `noRollbackForClassName`: 不会导致事务回滚的异常类名称数组
+- `propagation`: 设置可选的事务传播行为
+- `isolation`: 可选的事务隔离级别设置
+- `readOnly`: 读写或只读事务，默认读写
+- `timeout`: 事务超时时间设置
+- `rollbackFor`: 导致事务回滚的异常类数组
+- `rollbackForClassName`: 导致事务回滚的异常类名称数组
+- `noRollbackFor`: 不会导致事务回滚的异常类数组
+- `noRollbackForClassName`: 不会导致事务回滚的异常类名称数组
 
 ## 事务传播行为
 
 所谓事务的传播行为是指，如果在开始当前事务之前，一个事务上下文已经存在，此时有若干选项可以指定一个事务性方法的执行行为。在`TransactionDefinition`定义中包括了如下几个表示传播行为的常量：
 
-● `Propagation.REQUIRED`：如果当前上下文中存在事务，那么加入该事务，如果不存在事务，创建一个事务，这是默认的传播属性值。<font color='Chestnut Red'>**(默认)**</font>
-
-● `Propagation.SUPPORTS`：如果当前上下文存在事务，就加入事务，如果不存在事务，则使用非事务的方式执行。
-
-● `Propagation.NOT_SUPPORTED`：如果当前上下文中存在事务，则挂起当前事务，然后新的方法在没有事务的环境中执行。
-
-● `Propagation.REQUIREDS_NEW`：每次都会新建一个事务，并且同时将上下文中的事务挂起，执行当前新建事务完成以后，上下文事务恢复再执行。
-
-● `Propagation.MANDATORY`：如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。
-
-● `Propagation.NEVER`：如果当前上下文中存在事务，则抛出异常，否则在无事务环境上执行代码。
-
-● `Propagation.NESTED`：如果当前上下文中存在事务，则嵌套事务执行，如果不存在事务，则新建事务。
+1. `REQUIRED`：如果当前上下文中存在事务，那么加入该事务，如果不存在事务，创建一个事务，这是默认的传播属性值。<font color='Chestnut Red'>**(默认)**</font>
+2. `SUPPORTS`：如果当前上下文存在事务，就加入事务，如果不存在事务，则使用非事务的方式执行。
+3. `NOT_SUPPORTED`：如果当前上下文中存在事务，则挂起当前事务，然后新的方法在没有事务的环境中执行。
+4. `REQUIREDS_NEW`：每次都会新建一个事务，并且同时将上下文中的事务挂起，执行当前新建事务完成以后，上下文事务恢复再执行。
+5. `MANDATORY`：一定要有事务。如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。
+6. `NEVER`：如果当前上下文中存在事务，则抛出异常，否则在无事务环境上执行代码。
+7. `NESTED`：如果当前上下文中存在事务，则嵌套事务执行，如果不存在事务，则新建事务。
 
 > NEXSTED 嵌套事务呈现父子事务概念，二者之间是有关联的，核心思想就是子事务不会独立提交，而是取决于父事务，当父事务提交，那么子事务才会随之提交；如果父事务回滚，那么子事务也回滚。与此相反，PROPAGATION_REQUIRES_NEW 的内层事务，会立即提交，与外层毫无关联。
 >
@@ -411,7 +407,7 @@ Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。S
 
 在`Spring`中，事务有两种实现方式
 
-编程式事务管理：编程式事务管理使用`TransactionTemplate`或者直接使用底层的`PlatformTransactionManager`。对于编程式事务管理，`spring`推荐使用`TransactionTemplate`。
+编程式事务管理：编程式事务管理使用`TransactionTemplate`或者直接使用底层的`PlatformTransactionManager`。对于编程式事务管理，`Spring`推荐使用`TransactionTemplate`。
 
 声明式事务管理： 建立在`AOP`之上的。其本质是对方法前后进行拦截，然后在目标方法开始之前创建或者加入一个事务，在执行完目标方法之后根据执行情况提交或者回滚事务。
 
@@ -482,7 +478,7 @@ Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。S
 
 9. 加事务的方法中手动`try...catch`住了异常，只有将异常抛出来(*无论是主动还是被动*)事务才能回滚
 
-10. `Spring`事务默认回滚的是`RunTimeException`运行时异常和`Error`（错误），对于普通的Exception（非运行时异常），他不会回滚。可以指定回滚异常
+10. `Spring`事务默认回滚的是`RunTimeException`运行时异常，对于普通的Exception（非运行时异常），他不会回滚。可以指定回滚异常
 
 11. 嵌套事务回滚多了
 
@@ -500,8 +496,6 @@ public void add(UserModel userModel) throws Exception {
 
 // 一般情况下建议，将该参数设置成：Exception或Throwable。因为如果使用默认值，一旦程序抛出了Exception，事务不会回滚，这会出现很大的bug。
 ~~~
-
-
 
 # 注解区分
 
@@ -544,8 +538,8 @@ public class MyConfiguration implements MyInterface {
 
 `@Component`,`@Service`, `@Controller`, `@Repository`是 Spring 注解，注解后可以被 Spring 框架所扫描并注入到 Spring 容器来进行管理
 `@Component`是通用注解，其他三个注解是这个注解的拓展，并且具有了特定的功能
-`@Repository`注解在持久层中，具有将数据库操作抛出的原生异常翻译转化为spring的持久层异常的功能。
-`@Controller`是spring-mvc的注解，具有将请求进行转发，重定向的功能。
+`@Repository`注解在持久层中，具有将数据库操作抛出的原生异常翻译转化为Spring的持久层异常的功能。
+`@Controller`是Spring-MVC的注解，具有将请求进行转发，重定向的功能。
 `@Service`是业务逻辑层注解，这个注解只是标注该类处于业务逻辑层。
 用这些注解对应用进行分层之后，就能将请求处理，业务逻辑处理，数据库操作处理分离出来，为代码解耦，也方便了以后项目的维护和开发。
 
@@ -576,15 +570,15 @@ public class MyConfiguration implements MyInterface {
 
 1. 基于接口的 JDK 动态代理
 
-JDK 动态代理是利用反射机制生成一个实现代理接口的匿名类，在调用具体方法前调用InvocationHandler 来处理。
+   JDK 动态代理是利用反射机制生成一个实现代理接口的匿名类，在调用具体方法前调用InvocationHandler 来处理。
 
 2. 基于继承的 CGLib 动态代理
 
-CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载进来，通过修改其字节码生成子类来处理。
+   CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载进来，通过修改其字节码生成子类来处理。
 
 ### 静态代理
 
-
+  
 
 **核心**
 
@@ -600,21 +594,11 @@ CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载
 
 <font color='Chestnut Red'>**`JDK`动态代理与`CGlib`动态代理的区别：**</font>
 
-> 1. `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强.
+> `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强；它生成类的速度很快，但是运行时因为是基于反射，调用后续的类操作会很慢；而且他是只能针对接口编程的.
 >
-> 2. 它生成类的速度很快，但是运行时因为是基于反射，调用后续的类操作会很慢.
+> `CGLIB`是基于继承机制，继承被代理类，所以方法不要声明为`final`，然后重写父类方法达到增强了类的作用。它底层是基于`asm`第三方框架，是对代理对象类的`class`文件加载进来，通过修改其字节码生成子类来处理；生成类的速度慢，但是后续执行类的操作时候很快。可以针对类和接口.
 >
-> 3. 而且他是只能针对接口编程的.
->
-> 1. `CGLIB`是基于继承机制，继承被代理类，所以方法不要声明为`final`，然后重写父类方法达到增强了类的作用.
->
-> 2. 它底层是基于`asm`第三方框架，是对代理对象类的`class`文件加载进来，通过修改其字节码生成子类来处理.
->
-> 3. 生成类的速度慢，但是后续执行类的操作时候很快.
->
-> 4. 可以针对类和接口.
->
->    因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
+> 因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
 
 <font color='Chestnut Red'>**应用场景**</font>
 
@@ -694,7 +678,7 @@ Spring AOP已经集成了AspectJ，AspectJ应该算得上是Java生态系统中�
 结论：<font color='Chestnut Red'>**单例模式下属性注入的循环依赖可通过三级缓存处理循环依赖**</font>。下面两种无法解决：
 
 1. 构造器注入的循环依赖：`Spring`处理不了，因为加入`singletonFactories`三级缓存的前提是执行了构造器来创建半成品的对象，所以构造器的循环依赖没法解决。
-2. 非单例循环依赖：无法处理。因为spring容器不缓存`prototype`类型的`bean`，使得无法提前暴露出一个创建中的`bean`。`Spring`容器在获取`prototype`类型的`bean`时，如果因为循环依赖的存在，检测到当前线程已经正在处理该`bean`时，就会抛出异常
+2. 非单例循环依赖：无法处理。因为Spring容器不缓存`prototype`类型的`bean`，使得无法提前暴露出一个创建中的`bean`。`Spring`容器在获取`prototype`类型的`bean`时，如果因为循环依赖的存在，检测到当前线程已经正在处理该`bean`时，就会抛出异常
 
 首先，Spring单例对象的初始化大略分为三步：
 
@@ -716,7 +700,9 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 >
 > <font color='orange'>存在的问题 ：</font>
 >
-> 早期对象和完整对象都存在于一级缓存中，如果此时来了其它线程并发获取 bean，就可能从一级缓存中获取到不完整的 bean，这明显不行，那么我们不得已只能在从一级缓存获取对象处加一个互斥锁，以避免这个问题。而加互斥锁也带来了另一个问题，容器刷新完成后的普通获取 bean 的请求都需要竞争锁，如果这样处理，在高并发场景下使用 Spring 的性能一定会极低。
+> 早期对象和完整对象都存在于一级缓存中，如果此时来了其它线程并发获取 bean，就可能从一级缓存中获取到不完整的 bean
+>
+> 可以这样处理：从一级缓存获取对象处加一个互斥锁。而加互斥锁也带来了另一个问题，容器刷新完成后的普通获取 bean 的请求都需要竞争锁，如果这样处理，在高并发场景下使用 Spring 的性能一定会极低。
 >
 > 2. <font color='RedOrange'>只使用二级缓存</font>
 >
