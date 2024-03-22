@@ -2,11 +2,15 @@
 
 它支持的数据结，如 [字符串（strings）](http://redis.cn/topics/data-types-intro.html#strings)， [散列（hashes）](http://redis.cn/topics/data-types-intro.html#hashes)， [列表（lists）](http://redis.cn/topics/data-types-intro.html#lists)， [集合（sets）](http://redis.cn/topics/data-types-intro.html#sets)， [有序集合（sorted sets）](http://redis.cn/topics/data-types-intro.html#sorted-sets) 与范围查询， [bitmaps](http://redis.cn/topics/data-types-intro.html#bitmaps)， [hyperloglogs](http://redis.cn/topics/data-types-intro.html#hyperloglogs) 和 [地理空间（geospatial）](http://redis.cn/commands/geoadd.html) 索引半径查询。 Redis 内置了 [复制（replication）](http://redis.cn/topics/replication.html)，[LUA脚本（Lua scripting）](http://redis.cn/commands/eval.html)， [LRU驱动事件（LRU eviction）](http://redis.cn/topics/lru-cache.html)，[事务（transactions）](http://redis.cn/topics/transactions.html) 和不同级别的 [磁盘持久化（persistence）](http://redis.cn/topics/persistence.html)， 并通过 [Redis哨兵（Sentinel）](http://redis.cn/topics/sentinel.html)和自动 [分区（Cluster）](http://redis.cn/topics/cluster-tutorial.html)提供高可用性（high availability）。
 
-> Redis的工作线程是单线程的，但是整个Redis是多线程的（`持久化、异步删除`这些都是由额外的线程执行的）
+> Redis的工作线程是单线程的，但是整个Redis是多线程的（`持久化、异步删除、集群数据同步等`这些都是由额外的线程执行的）
 
-因为 Redis 是基于内存的操作，CPU不是Redis的性能瓶颈。Redis 的瓶颈最有可能是机器内存的大小或者网络带宽。既然单线程容易实现，而且 CPU 不会成为瓶颈，那就顺理成章地采用单线程的方案了。Redis是使用C语言开发的，官方提供的数据为 100000+ 的 QPS，完全不比同样是使用key-value的memecache差
+因为 Redis 是基于内存的操作，CPU不是Redis的性能瓶颈。Redis 的瓶颈最有可能是机器内存的大小或者网络带宽。既然单线程容易实现，而且 CPU 不会成为瓶颈，那就顺理成章地采用单线程的方案了。Redis是使用C语言开发的，官方数据表明单个节点的Redis  QPS为 10w+，完全不比同样是使用key-value的memecache差
 
-> Redis单线程为何还这么快？
+> Redis为什么要设计为单线程？单线程为何还这么快？
+>
+> 1. 基于内存。Redis命令操作主要都是基于内存，这已经足够快，不需要借助多线程。对于内存系统来说，如果没有上下文切换效率就是最高的，多次读写都是在一个CPU上的
+> 2. 高效的数据结构。Redis底层提供了动态简单动态字符串([SDS](https://github.com/jmilktea/jmilktea/blob/master/redis/string类型底层SDS.md))、跳表(skiplist)、压缩列表(ziplist)等数据结构来高效访问数据。
+> 3. 保持简单。引入多线程会使Redis变得复杂，例如需要考虑多线程并发访问资源竞争问题，数据结构也会变得复杂，hash就不能是单纯的hash，需要像java一样设计一个ConcurrentHashMap。还需要考虑线程切换带来的性能损耗
 
 误区 ：
 
@@ -14,8 +18,6 @@
 2. 多线程（CPU上下文会切换）不一定比单线程效率高
 
 速度：CPU > 内存 > 硬盘
-
-核心：Redis是将所有的数据全部放在内存中的，所以使用单线程去操作效率最高，多线程CPU会上下文切换，比较耗时，对于内存系统来说，如果没有上下文切换效率就是最高的，多次读写都是在一个CPU上的，在内存情况下，这就是最佳的方案。Redis6.0对于持久化、异步删除、集群数据同步等同步阻塞功能支持了多线程处理。
 
 **优势：**
 
@@ -326,7 +328,7 @@
 
 #  I/O 多路复用
 
-Redis 采用网络 I/O 多路复用技术，来保证在多连接的时候系统的高吞吐量。关于 I/O 多路复用(又被称为“事件驱动”)，首先要理解的是，操作系统为你提供了一个功能，当你的某个 socket 可读或者可写的时候，它可以给你一个通知。这样当配合非阻塞的 socket 使用时，只有当系统通知我哪个描述符可读了，我才去执行 read 操作，可以保证每次 read 都能读到有效数据而不做纯返回 -1 和 EAGAIN 的无用功，写操作类似。
+Redis 底层采用的是 I/O 多路复用模型来保证在多连接的时候系统的高吞吐量，**IO多路复用机制是指一个线程处理多个IO流，多路是指网络连接，复用指的是同一个线程。**关于 I/O 多路复用(又被称为“事件驱动”)，首先要理解的是，操作系统为你提供了一个功能，当你的某个 socket 可读或者可写的时候，它可以给你一个通知。这样当配合非阻塞的 socket 使用时，只有当系统通知我哪个描述符可读了，我才去执行 read 操作，可以保证每次 read 都能读到有效数据而不做纯返回 -1 和 EAGAIN 的无用功，写操作类似。
 
 操作系统的这个功能是通过 select/poll/epoll/kqueue 之类的系统调用函数来实现，这些函数都可以同时监视多个描述符的读写就绪状况，这样，多个描述符的 I/O 操作都能在一个线程内并发交替地顺序完成，这就叫 I/O 多路复用。多路---指的是多个 socket 连接，复用---指的是复用同一个 Redis 处理线程。多路复用主要有三种技术：select，poll，epoll。epoll 是最新的也是目前最好的多路复用技术。
 
