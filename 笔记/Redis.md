@@ -1321,35 +1321,35 @@ Redis 的全量同步过程主要分三个阶段：
 
 1. 每个 `Sentinel` 以 **每秒钟** 一次的频率，向它所知的 **主服务器**、**从服务器** 以及其他 `Sentinel` **实例** 发送一个 `PING` 命令。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220421201207.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170133044.png" alt="image-20241117013305934" style="zoom:67%;" />
 
 2. 如果一个 **实例**（`instance`）距离 **最后一次** 有效回复 `PING` 命令的时间超过 `down-after-milliseconds` 所指定的值，那么这个实例会被 `Sentinel` 标记为 **主观下线**。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220421201201.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170133646.png" alt="image-20241117013320534" style="zoom:67%;" />
 
 3. 如果一个 **主服务器** 被标记为 **主观下线**，那么正在 **监视** 这个 **主服务器** 的所有 `Sentinel` 节点，要以 **每秒一次** 的频率确认 **主服务器** 的确进入了 **主观下线** 状态。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220502162727.awebp" alt="img" style="zoom: 50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170133498.png" alt="image-20241117013330463" style="zoom:67%;" />
 
 
 
 4. 如果一个 **主服务器** 被标记为 **主观下线**，并且有 **足够数量** 的 `Sentinel`（至少要达到 **配置文件** 指定的数量）在指定的 **时间范围** 内同意这一判断，那么这个 **主服务器** 被标记为 **客观下线**。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220502162728.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170133037.png" alt="image-20241117013347000" style="zoom:67%;" />
 
 5. 在一般情况下， 每个 `Sentinel` 会以每 `10` 秒一次的频率，向它已知的所有 **主服务器** 和 **从服务器** 发送 `INFO` 命令。当一个 **主服务器** 被 `Sentinel` 标记为 **客观下线** 时，`Sentinel` 向 **下线主服务器** 的所有 **从服务器** 发送 `INFO` 命令的频率，会从 `10` 秒一次改为 **每秒一次**。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220502162732.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170134210.png" alt="image-20241117013406106" style="zoom:67%;" />
 
 
 
 6. `Sentinel` 和其他 `Sentinel` 协商 **主节点** 的状态，如果 **主节点** 处于 `SDOWN` 状态，则投票自动选出新的 **主节点**。将剩余的 **从节点** 指向 **新的主节点** 进行 **数据复制**。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220421201134.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170134212.png" alt="image-20241117013420105" style="zoom:67%;" />
 
 7. 当没有足够数量的 `Sentinel` 同意 **主服务器** 下线时， **主服务器** 的 **客观下线状态** 就会被移除。当 **主服务器** 重新向 `Sentinel` 的 `PING` 命令返回 **有效回复** 时，**主服务器** 的 **主观下线状态** 就会被移除。
 
-   <img src="https://gitee.com/qc_faith/picture/raw/master/image/20220421201140.awebp" alt="img" style="zoom:50%;" />
+   <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170134002.png" alt="image-20241117013433897" style="zoom:67%;" />
 
 > 注意：一个有效的 `PING` 回复可以是：`+PONG`、`-LOADING` 或者 `-MASTERDOWN`。如果 **服务器** 返回除以上三种回复之外的其他回复，又或者在 **指定时间** 内没有回复 `PING` 命令， 那么 `Sentinel` 认为服务器返回的回复 **无效**（`non-valid`）。
 

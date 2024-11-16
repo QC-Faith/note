@@ -829,7 +829,7 @@ determineConstructorsFromBeanPostProcessors方法会帮我们选择合适的构�
 
 <img src="https://gitee.com/qc_faith/picture/raw/master/image/202212291629689.png" alt="在这里插入图片描述" style="zoom:50%;" />
 
-<img src="https://img-blog.csdnimg.cn/2020080816421739.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzE1MDM3MjMx,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述" style="zoom:50%;" />
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170138512.png" alt="在这里插入图片描述" style="zoom:50%;" />
 
 我们可以看到这个函数调用了所有MergedBeanDefinitionPostProcessor的MergedBeanDefinitionPostProcessor方法。MergedBeanDefinitionPostProcessor有很多实现类，其中AutowiredAnnotationBeanPostProcessor是一个非常重要的实现类。主要用来解析所有扫描类里面的@Autowired和@Value注解。其实现的主要方法如下：
 

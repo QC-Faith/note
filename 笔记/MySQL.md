@@ -116,7 +116,7 @@
 
      `innodb_flush_log_at_trx_commit` 参数默认为 1 ，也就是说当事务提交时会调用 `fsync` 对 redo log 进行刷盘；建议在日常场景将该值设置为1，但在系统高峰期临时修改成2以应对大负载。
 
-     <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411162224931.awebp" alt="刷盘时机的总结" style="zoom: 67%;" />
+     ![image-20241117012117714](https://gitee.com/qc_faith/picture/raw/master/image/202411170121751.png)
 
 5. <font color='RedOrange'>**后台线程**</font>：
 
@@ -128,7 +128,7 @@
 
 默认情况下磁盘上的 redo log 文件个数为2，每个 redo log 文件大小为 48MB，这两个 redo log 文件组成了一个日志文件组，整体是一个环形结构，从头到尾进行循环写入
 
-<img src="https://gitee.com/qc_faith/picture/raw/master/image/202411162220099.awebp" alt="日志文件组示意图" style="zoom: 67%;" />
+![image-20241117012425629](https://gitee.com/qc_faith/picture/raw/master/image/202411170124664.png)
 
 在日志文件组中，有两个属性用于标识<font color='RedOrange'>当前写入位置</font>和<font color='RedOrange'>当前清除位置</font>，说明如下。
 
@@ -177,7 +177,7 @@ redo log采用的是WAL（Write-ahead logging，预写式日志），所有修�
 - `sync_binlog` 设置为 1，表示每次提交事务时，会将`binlog cache`的内容写入`page cache`，然后调用`fsync`函数将`page cache`的内容写到`binlog`；
 - `sync_binlog` 设置为 n(n > 1)，表示每次提交事务时，会将`binlog cache`的内容写入`page cache`，当向`page cache`写入数据的事务达到`n`个，此时调用`fsync`函数将`page cache`的内容写到`binlog`。在出现`IO`瓶颈的场景里，将`sync_binlog`设置成一个比较大的值，可以提升性能。同样的，如果机器宕机，会丢失最近`N`个事务的`binlog`日志。
 
-<img src="https://gitee.com/qc_faith/picture/raw/master/image/202312192145243.awebp" alt="写入时机示意图" style="zoom:50%;" />
+![image-20241117012445039](https://gitee.com/qc_faith/picture/raw/master/image/202411170124422.png)
 
 ### 两阶段提交
 
@@ -189,7 +189,7 @@ redo log采用的是WAL（Write-ahead logging，预写式日志），所有修�
 
 为了解决上述的问题，在`InnoDB`引擎中，使用了两阶段提交来解决。具体的实现就是将`redo log`为两个阶段，示意图如下所示。
 
-<img src="https://gitee.com/qc_faith/picture/raw/master/image/202312192210479.awebp" alt="两阶段提交示意图" style="zoom:50%;" />
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/202411170124807.png" alt="image-20241117012459703" style="zoom:67%;" />
 
 一条`redo log`记录可以由`事务ID + redo log记录数据 + 提交状态`组成，提交状态可以是`prepare`和`commit`，当第一次将一个数据修改写入`redo log`时，这条`redo log`记录的状态为`prepare`，这是第一阶段提交，后续提交事务时，会在`redo log`中将这个事务对应的记录的状态置为`commit`，这是第二阶段提交。根据上述的两阶段提交的写入方式，再结合`binlog`，可以在发生`MySQL`宕机导致`redo log`和`binlog`逻辑内容不一致时判断事务是否需要进行回滚。具体的判断策略如下所示。
 
@@ -1256,7 +1256,7 @@ dept_id|count(*)|
 
 由于事务`id`是严格递增的，所以`Read View`可以用下图进行示意。
 
-<img src="https://gitee.com/qc_faith/picture/raw/master/image/202312192254297.awebp" alt="Read View示意图" style="zoom: 67%;" />
+![image-20241117012632856](https://gitee.com/qc_faith/picture/raw/master/image/202411170126974.png)
 
 事务生成快照时，快照中包含哪些数据（哪些数据当前事务可见），是基于**Read View**和**undo log回滚链**决定的，对于每条数据，会先从其最新版本进行判断，如果判断不可见，则根据**undo log回滚链**找到旧版本并继续判断，如果某条数据所有版本都被判断为不可见，则说明这条数据对当前事务不可见，快照中不会包含这条数据的任何版本。判断规则如下所示。
 
