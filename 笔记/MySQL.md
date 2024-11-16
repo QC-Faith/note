@@ -116,7 +116,7 @@
 
      `innodb_flush_log_at_trx_commit` 参数默认为 1 ，也就是说当事务提交时会调用 `fsync` 对 redo log 进行刷盘；建议在日常场景将该值设置为1，但在系统高峰期临时修改成2以应对大负载。
 
-     <img src="https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c49f3d879953430fbf2e8c2ba5d74db5~tplv-k3u1fbpfcp-zoom-in-crop-mark:1512:0:0:0.awebp?" alt="刷盘时机的总结" style="zoom: 67%;" />
+     <img src="https://gitee.com/qc_faith/picture/raw/master/image/202411162224931.awebp" alt="刷盘时机的总结" style="zoom: 67%;" />
 
 5. <font color='RedOrange'>**后台线程**</font>：
 
@@ -128,7 +128,7 @@
 
 默认情况下磁盘上的 redo log 文件个数为2，每个 redo log 文件大小为 48MB，这两个 redo log 文件组成了一个日志文件组，整体是一个环形结构，从头到尾进行循环写入
 
-<img src="https://gitee.com/qc_faith/picture/raw/master/image/202312192112984.awebp" alt="日志文件组示意图" style="zoom: 67%;" />
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/202411162220099.awebp" alt="日志文件组示意图" style="zoom: 67%;" />
 
 在日志文件组中，有两个属性用于标识<font color='RedOrange'>当前写入位置</font>和<font color='RedOrange'>当前清除位置</font>，说明如下。
 
