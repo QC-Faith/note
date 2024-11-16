@@ -555,5 +555,3 @@ export JRE_HOME=$JAVA_HOME/jre
 (5) 通过命令 java -version 查看你目前的版本
 更新之后的版本需要重开窗口才可以是新的版本
 ```
-
-6d1d6c4aed227f51bd017c6872f516b0
