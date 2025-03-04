@@ -7,6 +7,14 @@
 
 3. 通过 `xml `文件或注解的方式将要执行的各种 `statement `配置起来，并通过`java `对象和 `statement `中 `sql `的动态参数进行映射生成最终执行的 `sql `语句，最后由 `mybatis `框架执行 `sql `并将结果映射为 `java `对象并返回。（从执行 `sql `到返回 `result `的过程）。
 
+## 工作原理
+
+1.  **配置文件**：MyBatis需要一个XML配置文件，叫做`mybatis-config.xml`，用于定义数据源、事务管理以及其他一些设置。 
+2.  **SQL映射文件**：为了告诉MyBatis如何映射SQL查询到我们的对象或Java Beans，我们需要定义另一些XML文件。这些文件里，我们会写SQL语句，并定义输入和输出。 
+3.  **SqlSessionFactory**：当MyBatis初始化时，它会根据上面提到的配置文件创建一个SqlSessionFactory。这个工厂只会被创建一次，然后被用来生产SqlSession，这些SqlSession是应用中真正做数据库操作的对象。 
+4.  **SqlSession**：这是MyBatis的一个关键组件。每当我们想和数据库进行交互时，我们就从SqlSessionFactory那里拿到一个SqlSession。这个会话包含了所有执行SQL的方法，比如`insert`, `update`, `delete`, `select`等。 
+5.  **映射器**：为了使代码更整洁，我们经常使用接口来代表SQL映射。这些接口的方法对应了之前在XML映射文件中定义的SQL语句。这样，我们就可以像调用普通的Java方法那样执行SQL语句了。 
+
 ## 优点
 
 1. 用 `SQL `语句编程，相当灵活，不会对应用程序或者数据库的现有设计造成任何影响，`SQL `写在 `XML `里，解除 `sql `与程序代码的耦合，便于统一管理；提供 `XML`标签，支持编写动态 `SQL `语句，并可重用。
@@ -31,7 +39,7 @@
 2. `Mybatis `直接编写原生态 `sql`，可以严格控制 `sql `执行性能，灵活度高，非常适合对关系数据模型要求不高的软件开发，因为这类软件需求变化频繁，一但需求变化要求迅速输出成果。但是灵活的前提是 `mybatis `无法做到数据库无关性，如果需要实现支持多种数据库的软件，则需要自定义多套 `sql `映射文件，工作量大。
 3. `Hibernate `对象/关系映射能力强，数据库无关性好，对于关系模型要求高的软件，如果用`hibernate`开发可以节省很多代码，提高效率。
 
-## 三种分页方式
+## 分页方式
 
 1. **Limit分页**
 
@@ -39,7 +47,7 @@
 
 2. **Mybatis_PageHelper分页插件**（物理分页）
 
-自定义拦截器实现了拦截所有以`ByPage`结尾的查询语句，并且利用获取到的分页相关参数统一在`sql`语句后面加上`limit`分页的相关语句，一劳永逸。不再需要在每个语句中单独去配置分页相关的参数了。
+   自定义拦截器实现了拦截所有以`ByPage`结尾的查询语句，并且利用获取到的分页相关参数统一在`sql`语句后面加上`limit`分页的相关语句，一劳永逸。不再需要在每个语句中单独去配置分页相关的参数了。
 
 3. **RowBounds分页（不推荐使用）**（逻辑分页）
 
@@ -69,84 +77,62 @@
    </select>
    ~~~
 
+   总结：
    
-
-总结：
-
-从上面三种`sql`分页的实现方式可以看出，通过`RowBounds`实现是最简便的，但是通过拦截器的实现方式是最优的方案。只需一次编写，所有的分页方法共同使用，还可以避免多次配置时的出错机率，需要修改时也只需要修改这一个文件，一劳永逸。而且是我们自己实现的，便于我们去控制和增加一些逻辑处理，使我们在外层更简单的使用。同时也不会出现数组分页和`RowBounds`分页导致的性能问题。数据量小时，`RowBounds`为一种好办法。但数据量大时，实现拦截器更好。
+   从上面三种`sql`分页的实现方式可以看出，通过`RowBounds`实现是最简便的，但是通过拦截器的实现方式是最优的方案。只需一次编写，所有的分页方法共同使用，还可以避免多次配置时的出错机率，需要修改时也只需要修改这一个文件，一劳永逸。而且是我们自己实现的，便于我们去控制和增加一些逻辑处理，使我们在外层更简单的使用。同时也不会出现数组分页和`RowBounds`分页导致的性能问题。数据量小时，`RowBounds`为一种好办法。但数据量大时，实现拦截器更好。
 
 ## 缓存
 
-缓存的意义
+### 一级缓存（本地缓存）：
 
-- 将用户经常查询的数据放在缓存（内存）中，用户去查询数据就不用从磁盘上(关系型数据库数据文件)查询，从缓存中查询，从而提高查询效率，解决了高并发系统的性能问题。
+1. **作用范围：** 一级缓存是在`SqlSession`的生命周期内有效，也就是说，每个`SqlSession`拥有独立的一级缓存。 
 
-- **`mybatis`一级缓存是一个`SqlSession`级别，`Sqlsession`只能访问自己的一级缓存的数据**
+2. **默认开启：** 一级缓存在MyBatis中默认是开启的，无需额外配置。 
 
-`Mybatis`的一级缓存是`sqlSession`级别的。只能访问自己的`sqlSession`内的缓存。如果`Mybatis`与`Spring`整合了，`Spring`会自动关闭`sqlSession`的。所以一级缓存会失效的。
+3. **特点：** 当执行查询操作时，查询的结果会被缓存在当前`SqlSession`中。如果再次执行相同的查询，MyBatis会首先尝试从缓存中获取数据，而不再访问数据库。 
 
-- **二级缓存是跨`SqlSession`，是`mapper`级别的缓存，对于`mapper`级别的缓存不同的`Sqlsession`是可以共享的。**
+4. **自动刷新：** `MyBatis`会在执行insert、update、delete等写操作时自动清空一级缓存，以保持数据的一致性。
+
+5. 在与Spring整合后，由于Spring管理`SqlSession`的方式改变，一级缓存的作用范围实际上变成了'当前事务'范围，而非单个方法调用。所以在跨事务的情况下，一级缓存会失效。
+
+   > 当MyBatis与Spring整合时：
+   >
+   > 1. **SqlSession的管理方式改变**：
+   >    - Spring使用`SqlSessionTemplate`代理SqlSession
+   >    - 事务由Spring的事务管理器控制
+   >    - SqlSession与Spring事务绑定
+   > 2. **缓存的生命周期变化**：
+   >    - 在**同一个Spring事务内**的多个数据库操作共享同一个SqlSession
+   >    - 一级缓存在当前事务范围内有效
+   >    - 事务提交或回滚时，SqlSession会被关闭
+   > 3. **实际效果**：
+   >    - 同一Service方法内多次调用相同Mapper方法，一级缓存生效
+   >    - 不同Service方法间如果在同一事务中，一级缓存同样生效
+   >    - 不同事务间的调用，一级缓存不共享
 
 ![image-20211113140004897](https://gitee.com/qc_faith/picture/raw/master/image/image-20211113140004897.png)
 
-### 一级缓存
+### 二级缓存（全局缓存）：
 
-第一次发出一个查询`sql`，`sql`查询结果写入`sqlsession`的一级缓存中，缓存使用的数据结构是一个map
+二级缓存是`MyBatis`提供的命名空间(namespace)级别的缓存机制，作用于mapper级别，可以跨SqlSession共享数据，本质上是一种空间换时间的优化策略。
 
-- `key`：`hashcode+sql+sql`输入参数+输出参数（`sql`的唯一标识）
-- `value`：用户信息
-
-同一个`sqlsession`再次发出相同的`sql`，就从缓存中取，不走数据库。如果两次中间出现`commit`操作（修改、添加、删除），本`sqlsession`中的一级缓存区域全部清空，下次再去缓存中查询不到所以要从数据库查询，从数据库查询到再写入缓存。
-
-**注意**
-
-- `Mybatis`默认就是支持一级缓存的，并不需要我们配置.
-- `mybatis`和`spring`整合后进行`mapper`代理开发，不支持一级缓存，`mybatis`和`spring`整合，**`spring`按照`mapper`的模板去生成`mapper`代理对象，模板中在最后统一关闭`sqlsession`。**
-
-### 二级缓存
-
-二级缓存的范围是`mapper`级别（`mapper`同一个命名空间），`mapper`以命名空间为单位创建缓存数据结构，结构是`map`。
-
-每次查询先看是否开启二级缓存，如果开启从二级缓存的数据结构中取缓存数据，如果从二级缓存中没有取到，再去一级缓存中找，如果一级缓存也没有，就去数据库查找。
-
-**二级缓存配置**
-
-在`Mybatis`的配置文件中配置二级缓存
+1.  **作用范围：** 二级缓存是在多个`SqlSession`之间共享的，即多个`SqlSession`可以共享同一个二级缓存。 
+2.  **配置开启：** 二级缓存需要手动配置开启，需要在映射文件的`<mapper>`标签下添加`<cache>`元素。 
 
 ```xml
-    <!-- 全局配置参数 -->
-    <settings>
-        <!-- 开启二级缓存 -->
-        <setting name="cacheEnabled" value="true"/>
-    </settings>
+<cache eviction="LRU" flushInterval="60000" size="1024" readOnly="true"/>
 ```
 
-二级缓存的范围是mapper级别的，因此我们的**Mapper如果要使用二级缓存，还需要在对应的映射文件中配置**
+3. **特点：** 二级缓存能够跨`SqlSession`共享查询结果，有效减少数据库访问次数。它的数据存储在全局范围的缓存中，可以由多个`SqlSession`访问。 
 
-`mybatis`二级缓存需要将查询结果映射的`pojo`实现` java.io.serializable`接口，如果不实现则抛出异常
+4. **缓存策略：** 可以根据需求选择不同的缓存策略（例如`LRU`、`FIFO`等），以及配置缓存的大小、刷新间隔等参数。 
 
-**二级缓存可以将内存的数据写到磁盘，存在对象的序列化和反序列化**，所以要实现`java.io.serializable`接口。如果结果映射的`pojo`中还包括了`pojo`，都要实现`java.io.serializable`接口。
+5. **注意事项：** 
 
-<font color='Apricot'>变化频率较高的`sql`，需要禁用二级缓存</font>：
+   > - 二级缓存可以缓存的对象需要是可序列化的，当`readOnly="false"`(默认值)时，对象必须实现`Serializable`接口。当`readOnly="true"`时，返回对象的引用，无需序列化，但线程不安全
+   > - 对namespace内的表执行INSERT/UPDATE/DELETE时，该namespace的缓存会自动清空；关联表更新时，需要手动调用清除方法或者通过`@CacheNamespaceRef`
 
-在`statement`中设置`useCache=false`可以禁用当前`select`语句的二级缓存，即每次查询都会发出`sql`去查询，默认情况是`true`，即该`sql`使用二级缓存。
-
-**应用场景**
-
-<font color='Apricot'>对查询频率高，变化频率低的数据建议使用二级缓存。</font>
-
-对于<font color='Apricot'>访问多的查询请求且用户对查询结果实时性要求不高</font>，可采用二级缓存降低数据库访问量，提高访问速度
-
-比如：
-
-- 耗时较高的统计分析`sql`、
-- 电话账单查询`sql`等。
-
-实现方法如下：<font color='Apricot'>通过设置刷新间隔时间，由`mybatis`每隔一段时间自动清空缓存，根据数据变化频率设置缓存刷新间隔`flushInterval`</font>，比如设置为30分钟、60分钟、24小时等，根据需求而定。
-
-**局限性**
-
-`mybatis`二级缓存对<font color='Apricot'>细粒度的数据级别</font>的缓存实现不好，比如：对商品信息进行缓存，由于商品信息查询访问量大，但是要求用户每次都能查询最新的商品信息，此时如果使用`mybatis`的二级缓存就无法实现当一个商品变化时只刷新该商品的缓存信息而不刷新其它商品的信息，**因为`mybaits`的二级缓存区域以`mapper`为单位划分，当一个商品信息变化会将所有商品信息的缓存数据全部清空**。解决此类问题需要在业务层根据需求对数据有针对性缓存。
+6. **使用场景：**二级缓存是提升读取性能的有效工具，适用于读多写少、数据变化不频繁的场景，但在数据一致性要求高或写操作频繁的系统中需谨慎使用
 
 ##`#{}`和`${}`的区别
 
@@ -162,25 +148,30 @@
 
 `#{}` 的变量替换是在`DBMS` 中；`${}` 的变量替换是在 `DBMS` 外
 
+## SqlSessionFactory
 
+SqlSessionFactory是MyBatis的核心接口，主要负责创建SqlSession实例。它在应用中通常是单例的，一旦创建就应当在应用的运行期间一直存在。
 
-## 问题
+## SqlSession
 
-1. **如何获取生成的主键？**
+SqlSession代表一个数据库会话，是执行SQL操作的主要接口。
 
-   `insert `方法总是返回一个 `int `值 ，这个值代表的是插入的行数。
+1. **生命周期**：非永久性，每次数据库访问都需要创建，使用后应关闭
+2. **核心功能**：提供执行SQL的各种方法（selectOne、selectList、insert、update、delete等），`Mybatis`中所有的数据库交互都由`SqlSession`来完成
+3. **事务管理**：提供commit()、rollback()方法进行事务控制
+4. **实现方式**：默认实现是DefaultSqlSession，与Spring集成时使用SqlSessionTemplate
 
-   如果采用自增长策略，自动生成的键值在 `insert `方法执行完后可以被设置到传入的参数对象中。
+<img src="https://gitee.com/qc_faith/picture/raw/master/image/20250302200923.jpeg" alt="img" style="zoom:67%;" />
 
-2. **当实体类中的属性名和表中的字段名不一样 ，怎么办**
+### SqlSession创建步骤
 
-第1种： 通过在查询的`SQL`语句中定义字段名的别名，让字段名的别名和实体类的属性名一致。
-
-第2种： 通过`<resultMap>`来映射字段名和实体类属性名的一一对应的关系。
-
-3. **SqlSession是啥**
-
-`SqlSession`是一个会话，相当于`JDBC`中的一个`Connection`对象，是整个`Mybatis`运行的核心。`SqlSession`接口提供了查询，插入，更新，删除方法，`Mybatis`中所有的数据库交互都由`SqlSession`来完成
+- 从配置中获取Environment；
+- 从Environment中取得DataSource；
+- 从Environment中取得TransactionFactory；
+- 从DataSource里获取数据库连接对象Connection；
+- 在取得的数据库连接上创建事务对象Transaction；
+- 创建Executor对象（该对象非常重要，事实上SqlSession的所有操作都是通过它完成的）；
+- 创建SqlSession对象。
 
 `SqlSession`接口有两个实现`SqlSessionManager，DefaultSqlSession`。
 
@@ -206,7 +197,106 @@
   - `ParameterHandler`完成对`SQL`语句的配置，只有一个实现`DefaultParameterHandler`
 
 - `ResultHandler`(结果集处理器)：进行最后结果集（`ResultSet`）的封装返回处理。
+
   - `ResultSetHandler`完成对对结果集的处理，返回需要的数据类型。也只有一个实现`DefaultReultSetHandler`.
+
+## Interceptor插件
+
+`MyBatis`的插件机制允许在`MyBatis`的核心组件执行过程中插入自定义逻辑，以扩展或修改其行为。插件可以在SQL执行、结果映射、参数处理等阶段进行干预。插件运行原理是基于Java的动态代理，它可以包装`MyBatis`的核心组件，拦截方法调用，并在方法执行前后执行自定义逻辑。
+
+> `MyBatis`拦截器可拦截`Executor`、`ParameterHandler`、`ResultSetHandler`和`StatementHandler`
+
+插件机制的核心是`Interceptor`接口，可以实现这个接口，编写自己的插件逻辑。一个插件主要包括以下几个步骤：
+
+1.  **实现Interceptor接口：** 创建一个类，实现`MyBatis`提供的`Interceptor`接口，该接口包含了`intercept`和`plugin`两个方法。 
+2.  **实现intercept方法：** `intercept`方法是插件的核心，它会在方法执行前后进行拦截。你可以在这个方法中编写自己的逻辑。 
+3.  **实现plugin方法：** `plugin`方法用于创建代理对象，将插件包装在目标对象上，使得插件逻辑能够被执行。 
+4.  **配置插件：** 类上使用`@Intercepts`注解或者在`MyBatis`的配置文件中，通过`<plugins>`标签配置。通常需要指定插件类和一些参数。 
+
+例如：拦截器与SQL时间统计
+
+~~~java
+@Intercepts({
+        @Signature(
+                type = Executor.class,
+                method = "update",
+                args = {MappedStatement.class, Object.class}),
+        @Signature(
+                type = Executor.class,
+                method = "query",
+                args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class})
+})
+public class MyPlugin implements Interceptor {
+    @Override
+    public Object intercept(Invocation invocation) throws Throwable {
+        // 记录开始时间戳
+        long startTime = System.currentTimeMillis();
+
+        // 调用原始方法(SQL执行)
+        Object result = invocation.proceed();
+
+        // 计算执行时间
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+
+        // 获取相关SQL信息用于日志
+        String methodName = invocation.getMethod().getName();
+        Object target = invocation.getTarget();
+        String sqlId = getSqlId(invocation); // 辅助方法，见下文
+
+        // 打印SQL执行时间
+        System.out.println("SQL执行ID: " + sqlId + ", 执行时间: " + executionTime + "ms");
+
+        return result;
+    }
+
+    // 辅助方法：提取SQL ID
+    private String getSqlId(Invocation invocation) {
+        Object[] args = invocation.getArgs();
+        if (args != null && args.length > 0 && args[0] instanceof MappedStatement) {
+            MappedStatement ms = (MappedStatement) args[0];
+            return ms.getId();
+        }
+        return "Unknown";
+    }
+}
+~~~
+
+### 插件拦截点
+
+插件拦截关键点：
+
+1. **Executor（执行器）层面的拦截：** 这是SQL语句的执行层面，插件可以在SQL语句执行前后进行拦截。这包括了SQL的预处理、参数设置、查询结果的映射等。 
+
+2. **StatementHandler（语句处理器）层面的拦截：** 这是对SQL语句的处理层面，插件可以在SQL语句被执行之前进行拦截，可以在这里修改、替换、生成SQL语句。 
+
+3. **ParameterHandler（参数处理器）层面的拦截：** 这是处理参数的层面，插件可以在参数传递给SQL语句之前进行拦截，可以在这里修改参数值。 
+
+4. **ResultSetHandler（结果集处理器）层面的拦截：** 这是处理查询结果的层面，插件可以在查询结果返回给调用方之前进行拦截，可以在这里对查询结果进行修改、处理。 
+
+   > 插件使用场景示例：
+   >
+   > 1.  **日志记录：** 创建一个插件，拦截Executor层的SQL执行，记录每个SQL语句的执行时间、执行情况等，以便于性能分析和故障排查。 
+   > 2.  **分页支持：** 编写一个拦截器，在StatementHandler层拦截SQL语句，根据传入的分页参数，动态修改SQL语句以实现数据库分页查询。 
+   > 3.  **权限控制：** 开发一个插件，拦截StatementHandler层的SQL执行，根据当前用户的权限动态添加查询条件，确保用户只能访问其有权限的数据。 
+   > 4.  **二级缓存扩展：** 创建一个插件，在ResultSetHandler层拦截查询结果，对结果进行加工处理，然后再将处理后的结果放入二级缓存，提供更加定制化的缓存机制。 
+   > 5.  **自动填充字段：** 编写一个拦截器，在ParameterHandler层拦截参数设置，根据需要自动填充一些字段，比如创建时间、更新时间等。
+
+
+
+## 问题
+
+1. **如何获取生成的主键？**
+
+   `insert `方法总是返回一个 `int `值 ，这个值代表的是插入的行数。
+
+   如果采用自增长策略，自动生成的键值在 `insert `方法执行完后可以被设置到传入的参数对象中。
+
+2. **当实体类中的属性名和表中的字段名不一样 ，怎么办**
+
+   1. 通过在查询的`SQL`语句中定义字段名的别名，让字段名的别名和实体类的属性名一致。
+   2. 通过`<resultMap>`来映射字段名和实体类属性名的一一对应的关系。
+
 
 # ParameterHandler
 

@@ -98,8 +98,6 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 **`SpringBoot` 自带了 `Actuator` 监控功能，主要用于提供对应用程序监控，以及控制的能力**，比如监控应用程序的运行状况，或者内存、线程池、`Http` 请求统计等，同时还提供了关闭应用程序等功能。
 
-
-
 ## 启动流程
 
 **1. 创建并启动计时监控类**
@@ -315,8 +313,6 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 `starter`可以当成是一个`maven`依赖组，引入这个组名就引入了相关的依赖和一些初始化的配置。
 
 ![img](https://gitee.com/qc_faith/picture/raw/master/image/202211051829363.png)
-
-
 
 ##启动时运行特定的代码
 
@@ -657,21 +653,78 @@ Spring AOP已经集成了AspectJ，AspectJ应该算得上是Java生态系统中�
 
 ## IOC
 
-控制反转是一种设计思想，就是将原本在程序中手动创建对象的控制权，交给`IOC`容器来管理，并由`IOC`容器完成对象的注入。这样可以很大程度上简化应用的开发，把应用从复杂的依赖关系中解放出来。`IOC`容器就像是一个工厂一样，当我们需要创建一个对象的时候，只需要配置好配置文件/注解即可，完全不用考虑对象是如何被创建出来的。
+控制反转(Inversion of Control)是一种软件设计思想，它将传统上由程序代码直接操控的对象的调用权交给容器，通过容器来实现对象组件的装配和管理。所谓"控制反转"，就是对组件对象控制权的转移，从程序代码本身转移到了外部容器。
+
+**优势：**
+
+> - **解耦**：降低组件之间的耦合度，实现软件各层之间的解耦
+> - **集中管理**：统一管理对象的创建和生命周期
+> - **方便配置和管理**：便于修改配置而不必修改代码
 
 `IoC`的主要实现方式有两种：依赖查找、依赖注入。依赖注入是一种更可取的方式。<font color='orange'>实现原理就是工厂模式加反射机制。</font>
 
-**区别**
+- **工厂模式**：IoC容器本质上是一个大型工厂，负责创建、装配对象
+- **反射机制**：利用Java反射动态创建对象并注入依赖
 
-依赖查找，主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
+### **依赖查找、依赖注入**
 
-依赖注入，组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
+依赖查找：主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
 
-**IOC容器**
+> **特点**：
+>
+> - 组件主动使用容器API获取依赖
+> - 组件与容器API耦合度较高
+> - 侵入性较强，改变了组件的编码方式
 
-`IoC`容器：具有依赖注入功能的容器，可以创建对象的容器。`IoC`容器负责实例化、定位、配置应用程序中的对象并建立这些对象之间的依赖。
+~~~	java
+// 依赖查找方式
+ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
+UserService userService = (UserService) context.getBean("userService");
+userService.doSomething();
+~~~
+
+依赖注入：组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
+
+> 依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
+>
+> **`IoC` 和 `DI` 的关系**： DI是IoC的一种重要实现策略，但IoC的实现不仅限于DI，还包括依赖查找等方式。在现代框架中，DI因其低侵入性和高可测试性，已成为IoC最主流的实现方式。
+>
+> **`Spring`依赖注入方式**
+>
+> - 注解注入方式
+> - set注入方式
+> - 构造器注入方式
+>
+> 推荐使用<font color='Chestnut Red'>基于注解注入方式，配置较少，比较方便</font>。
+
+### **IOC容器**
+
+`IoC`容器：具有依赖注入功能的容器，可以创建对象的容器。`IoC`容器负责对象的实例化、初始化、对象的装配(依赖注入)以及<font color='Chestnut Red'>Bean生命周期的管理</font>。
 
 依赖注入：由`IoC`容器动态地将某个对象所需要的外部资源（包括对象、资源、常量数据）注入到组件(`Controller, Service等`）之中。简单点说，就是`IoC`容器会把当前对象所需要的外部资源动态的注入给我们。
+
+> 在Spring框架中，IoC容器实际上是一个存放各种对象的Map集合：
+>
+> - key：Bean的名称或ID
+> - value：Bean对象
+>
+> **主要实现接口**：
+>
+> - `BeanFactory`：基础容器，提供基本的IoC功能
+> - `ApplicationContext`：高级容器，扩展了BeanFactory，支持应用事件发布，集成AOP功能。
+> - **ApplicationContext常见实现**：
+>   - `ClassPathXmlApplicationContext`：从类路径加载配置
+>   - `FileSystemXmlApplicationContext`：从文件系统加载配置
+>   - `AnnotationConfigApplicationContext`：基于Java注解配置
+>   - `WebApplicationContext`：为Web应用准备的专用上下文
+>
+> **容器初始化流程**：
+>
+> 1. 读取配置（XML/注解/Java配置）
+> 2. 解析配置信息到BeanDefinition
+> 3. 将BeanDefinition注册到BeanFactory
+> 4. 实例化非懒加载的单例Bean
+> 5. 触发各种Bean的初始化方法
 
 ## 循环依赖
 
@@ -711,20 +764,6 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 > 把AOP的代理对象放在二级缓存中也能解决循环依赖问题，那么这个代理对象就要在 Bean 创建完全之前就创建好，这就势必需要将BeanPostProcessor阶段提前或者侵入到填充属性的流程中，但是这样会导致维护代理对象的逻辑和getBean的逻辑过于耦合。
 
 三级缓存的核心思想，就是把 Bean 的实例化，和 Bean 里面的依赖注入进行分离。 多级缓存并不只是为了解决循环依赖和AOP的问题，还考虑到了逻辑的分离、结构的扩展性和保证数据安全前提下的效率问题等
-
-##依赖注入（DI）
-
-依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
-
-**`IoC` 和 `DI` 的关系**： `DI` 是实现 `IoC` 的方法和手段。
-
-**`Spring`依赖注入方式**
-
-- 注解注入方式
-- set注入方式
-- 构造器注入方式
-
-推荐使用<font color='Chestnut Red'>基于注解注入方式，配置较少，比较方便</font>。
 
 ## Bean的作用域
 
@@ -767,43 +806,28 @@ Bean的完整生命周期经历了各种方法调用，这些方法可以划分�
 
 **具体而言，流程如下**
 
-- 如果 `BeanFactoryPostProcessor` 和 `Bean` 关联, 则调用`postProcessBeanFactory`方法.(即<font color='RedOrange'>首先尝试从Bean工厂中获取Bean</font>)
-
-- 如果 `InstantiationAwareBeanPostProcessor` 和 `Bean` 关联，则调用`postProcessBeforeInstantiation`方法
-
-- 根据配置情况调用 `Bean` 构造方法<font color='RedOrange'>实例化 Bean</font>。
-
-- 利用依赖注入完成 `Bean` 中所有<font color='RedOrange'>属性值的配置注入</font>。
-
-- 如果 `InstantiationAwareBeanPostProcessor` 和 `Bean` 关联，则调用`postProcessAfterInstantiation`方法和`postProcessProperties`
-
-- 调用`xxxAware`接口
-
-   (上图只是给了几个例子) 
-
-  - 第一类`Aware`接口
-    - 如果 `Bean` 实现了 `BeanNameAware` 接口，则 `Spring` 调用 `Bean` 的 `setBeanName()` 方法传入当前 `Bean` 的 `id` 值。
-    - 如果 `Bean` 实现了 `BeanClassLoaderAware` 接口，则 `Spring` 调用 `setBeanClassLoader()` 方法传入`classLoader`的引用。
-    - 如果 `Bean` 实现了 `BeanFactoryAware` 接口，则 `Spring` 调用 `setBeanFactory()` 方法传入当前工厂实例的引用。
-  - 第二类`Aware`接口
-    - 如果 `Bean` 实现了 `EnvironmentAware` 接口，则 `Spring` 调用 `setEnvironment()` 方法传入当前 `Environment` 实例的引用。
-    - 如果 `Bean` 实现了 `EmbeddedValueResolverAware` 接口，则 `Spring` 调用 `setEmbeddedValueResolver()` 方法传入当前 `StringValueResolver` 实例的引用。
-    - 如果 `Bean` 实现了 `ApplicationContextAware` 接口，则 `Spring` 调用 `setApplicationContext()` 方法传入当前 `ApplicationContext` 实例的引用。
-    - ...
-
-- 如果 `BeanPostProcessor` 和 `Bean` 关联，则 `Spring` 将调用该接口的预初始化方法 `postProcessBeforeInitialzation()` 对 `Bean` 进行加工操作，此处非常重要，<font color='Magenta'>Spring 的 AOP 就是利用它实现的</font>。
-
-- 如果 `Bean` 实现了 `InitializingBean` 接口，则 `Spring` 将调用 `afterPropertiesSet()` 方法。(或者有执行`@PostConstruct`注解的方法)
-
-- 如果在配置文件中通过 <font color='RedOrange'>init-method</font> 属性指定了初始化方法，则调用该初始化方法。
-
-- 如果 `BeanPostProcessor` 和 `Bean` 关联，则 `Spring` 将调用该接口的初始化方法 `postProcessAfterInitialization()`。此时，`Bean` 已经可以被应用系统使用了。
-
+- **实例化**：创建Bean实例（new）。
+- **属性赋值**：设置属性值和依赖注入
+- **初始化**：
+   - 执行`xxxAware`等接口方法
+     - 第一类`Aware`接口
+       - 如果 `Bean` 实现了 `BeanNameAware` 接口，则 `Spring` 调用 `Bean` 的 `setBeanName()` 方法传入当前 `Bean` 的 `id` 值。
+       - 如果 `Bean` 实现了 `BeanClassLoaderAware` 接口，则 `Spring` 调用 `setBeanClassLoader()` 方法传入`classLoader`的引用。
+       - 如果 `Bean` 实现了 `BeanFactoryAware` 接口，则 `Spring` 调用 `setBeanFactory()` 方法传入当前工厂实例的引用。
+     - 第二类`Aware`接口
+       - 如果 `Bean` 实现了 `EnvironmentAware` 接口，则 `Spring` 调用 `setEnvironment()` 方法传入当前 `Environment` 实例的引用。
+       - 如果 `Bean` 实现了 `EmbeddedValueResolverAware` 接口，则 `Spring` 调用 `setEmbeddedValueResolver()` 方法传入当前 `StringValueResolver` 实例的引用。
+       - 如果 `Bean` 实现了 `ApplicationContextAware` 接口，则 `Spring` 调用 `setApplicationContext()` 方法传入当前 `ApplicationContext` 实例的引用。
+   - 执行BeanPostProcessor的前置处理方法`postProcessBeforeInitialzation()`，此处非常重要，<font color='Magenta'>Spring 的 AOP 就是利用它实现的</font>。
+   - 执行InitializingBean的afterPropertiesSet方法。(或者执行有`@PostConstruct`注解的方法)
+   - 执行自定义init-method
+   - 执行BeanPostProcessor的后置处理方法 `postProcessAfterInitialization()`。
+- **使用**：此时，`Bean` 已经可以被应用系统使用了。
 - 如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="singleton"，则将该 Bean 放入 Spring IoC 的缓存池中，将触发 Spring 对该 Bean 的生命周期管理；如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="prototype"，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
+- **销毁**：
+   - 执行DisposableBean的destroy方法；(或者执行有`@PreDestroy`注解的方法)
+   - 执行自定义destroy-method
 
-- 如果 Bean 实现了 `DisposableBean` 接口，则 `Spring` 会调用 `destory()` 方法将 `Spring` 中的 `Bean` 销毁；(或者有执行`@PreDestroy`注解的方法)
-
-- 如果在配置文件中通过 <font color='RedOrange'>destory-method</font> 属性指定了 `Bean` 的销毁方法，则 `Spring` 将调用该方法对 `Bean` 进行销毁。
 
 ## 面试题
 
