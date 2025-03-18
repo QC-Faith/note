@@ -1,81 +1,3 @@
-# AbstraceApplicationContext refresh 方法及扩展
-
-<font color='Chestnut Red'>**一、prepareRefresh()**</font>
-
-刷新前的准备 加载 PropertySource 可扩展点 `propertySource`
-1、继承/实现 Environment, 并在 customizePropertySources 方法 加入自己想配置的 propertySource
-2、继承 AnnotationConfigServletWebServerApplicationContext 并实现 initPropertySources， 添加自己的 propertySource
-3、在 ApplicationContext refresh 前获取 enviroment，并添加 propertySource
-
-<font color='Chestnut Red'>**二、obtainFreshBeanFactory()**</font>
-
-获取 beanFactory，没有扩展点
-
-<font color='Chestnut Red'>**三、prepareBeanFactory(beanFactory)**</font>
-
-准备beanFacoty的配置
-1、指定classLoader
-2、指定SpEL
-3、指定属性编辑注册器ProperytEditorRegistrar
-4、指定预先beanPostProcessor， 如各种aware织入处理，包括ApplicationContextAwareProcessor(用于处理自定义bean织入ApplicationContext)
-ApplicationListenerDetector(用于提早发现bean定义的监听器)
-5、注册特殊依赖，和排除特殊依赖
-6、检查是否有类加载织入
-7、注册特殊bean，如environment, jvm配置参数，系统配置参数
-
-通过以上生命以及代码的声明方式，可以扩展的有
-1、在refresh前，获取beanFactory，并添加beanPostProcessor，这样添加的beanProstProcessor比一般的beanProstProcessor能早处理
-
-<font color='Chestnut Red'>**四、postProcessBeanFactory(beanFactory)**</font>
-
-处理beanFactory, 默认什么都没触发
-
-<font color='Chestnut Red'>**五、invokeBeanFactoryPostProcessors(beanFactory)**</font>
-
-- 首先初始化并按顺序批次触发所有BeanDefinitionRegistryPostProcessor
-
-  (BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor的子接口)
-
-  - 这里包括处理@Configuration/@Component/@Import/@ImportResource/@ComponentScan的BeanDefinition加载注册/解析，并一起处理一下步骤
-  - 包括类启动类上注释的其他注解，以及注解里引入的注解如@Import,@ComponentScan等
-    - 包括类/注解类上声明的@ImportSelector(如spring-boot的执行**AutoConfigrationImportSelector**类的getAutoConfigurationEntry方法加载所有spring.factories的EnableAutoConfiguration)beanDefinition加载注册
-      这里是给BeanFacotyPostProcessor触发的机会的，当然也可以实现BeanFacotyPostProcessor来干别的事情
-      比如PropertyPlaceholderConfiger实现了BeanFactoryPostProcessor处理占位符
-
-- BeanDefinitionRegistryPostProcessor会被多次执行，一次是参数传递，一次是查询，还有一次是上一次查询附加查询出来的BeanDefinitionRegistryPostProcessor
-
-- 然后初始化并按顺序批次**触发**所有**BeanFactoryPostProcessor**， 一样的会被执行多次
-
-<font color='Chestnut Red'>**六、registerBeanPostProcessors(beanFactory)**</font>
-
-注册beanPostProcessor, 即所有BeanPostProcessor的扩展
-
-<font color='Chestnut Red'>**七、initMessageSource ()**</font>
-
-初始化国际化相关
-
-<font color='Chestnut Red'>**八、initApplicationEventMulticaster()**</font>
-
-初始化事件分发相关
-
-<font color='Chestnut Red'>**九、onRefresh()**</font>
-
-默认空实现，ApplicationContext的子类可以实现该方法，做自己特殊bean的初始化等。
-
-<font color='Chestnut Red'>**十、registerListeners()**</font>
-
-注册spring事件监听器，并广播可能的事件。 继承ApplicationListener即可实现自己的监听。
-因为走到这一步，应用已经刷新，**即无法实现**应用启动前，启动中的事件监听。
-spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引导启动流程，能在Spring的启动过程中发出各个事件, 详情请看[spring-boot启动](https://www.jianshu.com/p/301582a9fade)
-
-<font color='Chestnut Red'>**十一、finishBeanFactoryInitialization(beanFactory)**</font>
-
-初始化非延迟实例化的单例
-
-<font color='Chestnut Red'>**十二、finishRefresh()**</font>
-
-结束刷新, 对bean生命周期监视。发送刷新完毕事件. 监视存活的bean(MBean)如果有必要
-
 # SpringBoot
 
 ## 特性
@@ -98,81 +20,110 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 **`SpringBoot` 自带了 `Actuator` 监控功能，主要用于提供对应用程序监控，以及控制的能力**，比如监控应用程序的运行状况，或者内存、线程池、`Http` 请求统计等，同时还提供了关闭应用程序等功能。
 
-## 启动流程
+## SpringBoot 启动流程
 
-**1. 创建并启动计时监控类**
+1. **加载启动类**
 
-计时器是为了监控并记录` Spring Boot `应用启动的时间的，它会记录当前任务的名称，然后开启计时器。
+      - 启动类是标准 Java 类，包含 `main` 方法，标记 `@SpringBootApplication` 注解。
 
-**2. 声明应用上下文对象和异常报告集合**
-
-声明了应用上下文对象和一个异常报告的 `ArrayList` 集合。
-
-**3. 设置系统属性 headless 的值**
-
-设置` Java.awt.headless = true`，其中` awt（Abstract Window Toolkit）`的含义是抽象窗口工具集。设置为 `true` 表示运行一个 `headless` 服务器，可以用它来作一些简单的图像处理。
-
-**4. 创建所有 Spring 运行监听器并发布应用启动事件**
-
-获取配置的监听器名称并实例化所有的类。
-
-**5. 初始化默认应用的参数类**
-
-声明并创建一个应用参数对象。
-
-**6. 准备环境**
-
-创建配置并且绑定环境（通过` property sources `和 `profiles` 等配置文件）。
-
-**7. 创建 Banner 的打印类**
-
-`SpringBoot` 启动时会打印 `Banner` 图片
-
-**8. 创建应用上下文**
-
-创建 `ApplicationContext` 上下文对象。
-
-**9. 实例化异常报告器**
-
-执行 `getSpringFactoriesInstances ()` 方法获取异常类的名称，并通过反射实例化。
-
-**10. 准备应用上下文**
-
-把上面步骤已创建好的对象，设置到 `prepareContext` 中准备上下文。
-
-**11. 刷新应用上下文**
-
-解析配置文件，加载 `bean` 对象，并启动内置的 `web` 容器等等。
-
-**12. 事件处理**
-
-一些自定义的后置处理操作。
-
-**13. 停止计时器监控类**
-
-停止此过程第一步中的程序计时器，并统计任务的执行信息。
-
-**14. 输出日志信息**
-
-把相关的记录信息，如类名、时间等信息进行控制台输出。
-
-**15. 发布应用上下文启动完成事件**
-
-触发所有 `SpringApplicationRunListener` 监听器的 `started` 事件方法。
-
-**16. 执行所有 Runner 运行器**
-
-执行所有的 `ApplicationRunner` 和 `CommandLineRunner` 运行器。
-
-**17. 发布应用上下文就绪事件**
-
-触发所有的 `SpringApplicationRunListener` 监听器的 `running` 事件。
-
-**18. 返回应用上下文对象**
-
-至此，`SpringBoot` 启动完成。
+      - `@SpringBootApplication` 组合了三个核心注解：
+        - `@SpringBootConfiguration`：标识启动类是配置类。
+        - `@EnableAutoConfiguration`：开启自动配置。
+        - `@ComponentScan`：扫描当前包及子包下的组件。
 
 
+2. **初始化 `SpringApplication` 实例**
+      - 调用 `SpringApplication.run(启动类.class, args)` 时：
+        1. **推断应用类型**：根据类路径是否存在 `DispatcherServlet` 等类，判断是 Web 应用（Servlet/Reactive）还是非 Web 应用。
+        2. **加载配置源**：通过 `SpringFactoriesLoader` 加载 `META-INF/spring.factories` 中的配置类，初始化监听器（`ApplicationListener`）和初始化器（`ApplicationContextInitializer`）。
+        3. **准备环境（Environment）**：加载外部属性（如 `application.yml`），合并命令行参数、系统环境变量等**按优先级覆盖**配置。
+
+
+3. **创建并准备应用上下文（ApplicationContext）**
+
+      - **实例化上下文类型**（例如）：
+        - Web：`AnnotationConfigServletWebServerApplicationContext`
+        - 非 Web：`AnnotationConfigApplicationContext`
+
+      - **触发初始化器**：执行注册的 `ApplicationContextInitializer` 自定义上下文配置。
+
+
+4. **刷新上下文（`refresh()` 核心阶段）**
+
+   通过 `AbstractApplicationContext.refresh()` 完成关键步骤：
+
+   > 1. **准备 BeanFactory**：
+   >    创建 `DefaultListableBeanFactory`，注册核心后处理器（如 `ConfigurationClassPostProcessor`）。
+   > 2. 加载 Bean 定义：
+   >    - 扫描 `@Component`、`@Service`、`@Repository` 等注解的类。
+   >    - 自动配置阶段：
+   >      - 从 `spring.factories` 加载 `EnableAutoConfiguration` 类。
+   >      - 过滤排除项（`@EnableAutoConfiguration.exclude`）。
+   >      - 通过条件注解（如 `@ConditionalOnClass`）决定是否应用配置。
+   > 3. **调用 BeanFactoryPostProcessor**：例如处理 `@Configuration` 类中的 `@Bean` 方法，或加载属性占位符（`@Value`）。
+   > 4. **注册 BeanPostProcessor**：准备好处理 Bean 初始化前后的逻辑（如 `@Autowired` 注入、`@PostConstruct` 回调）。
+   > 5. 初始化单例 Bean：
+   >    - 实例化所有非懒加载的单例 Bean，完成依赖注入和初始化（`@PostConstruct`）。
+   >    - 启动内嵌服务器（仅限 Web 应用）：
+   >      - 检测依赖中的服务器类型（如 Tomcat、Jetty）。
+   >      - 创建 `WebServer` 并绑定端口，但未开始监听（需要在后续阶段启动）。
+   > 6. **发布 `ContextRefreshedEvent` 事件**：通知监听者上下文刷新完成。
+
+5. **执行启动扩展点**
+
+      - **`ApplicationRunner` 和 `CommandLineRunner`**：
+        - 所有实现类按 `@Order` 顺序执行 `run()` 方法，支持启动后预加载逻辑。
+
+      - **生命周期回调**：
+        - `@PostConstruct`：在 Bean 初始化期间调用。
+        - `SmartLifecycle` 接口：控制更精确的生命阶段（如启动、停止）。
+
+
+6. **启动 Web 服务器并监听请求（Web 场景）**
+
+      - **启用服务器监听**：
+        - 在上下文刷新的最后阶段，调用 `WebServer.start()` 开始监听端口。
+        - **触发 `ServletWebServerInitializedEvent`**：通知服务器已准备就绪。
+
+      - **初始化 MVC 组件**：
+        - 加载控制器（`@RestController`），注册过滤器（`Filter`）、拦截器等。
+
+
+7. **启动完成**
+
+      - **发布 `ApplicationStartedEvent` 和 `ApplicationReadyEvent`**：
+        - 区分“启动中”与“完全就绪”状态。
+
+      - **控制台输出 Banner**（默认开启）和启动日志。
+
+
+8. **等待请求 & 运行阶段**
+
+      - 应用进入持续运行状态，处理传入的 HTTP 请求或执行定时任务等。
+
+      - 可通过 `Ctrl+C` 或 `SIGTERM` 优雅关闭，触发 `ApplicationContext.close()`, 销毁 Bean 并释放资源。
+
+
+---
+
+### **关键补充说明**
+1. **事件驱动机制**：
+   Spring Boot 通过 `ApplicationEvent` 和 `ApplicationListener` 实现启动过程的可观测性（如 `ApplicationStartingEvent`, `ApplicationPreparedEvent`）。
+2. **条件装配（Conditional）**：
+   自动配置根据类路径、Bean 存在性、属性值等条件动态生效（例如 `@ConditionalOnMissingBean` 允许用户覆盖默认配置）。
+3. **外部化配置的优先级**：
+   命令行参数 > 系统环境变量 > `application-{profile}.yml` > `application.yml` > 默认属性。
+4. **内嵌服务器的选择逻辑**：
+   根据引入的依赖（如 `spring-boot-starter-web` 默认选用 Tomcat）自动适配服务器类型。
+
+---
+
+### **流程图简化描述**
+```
+加载启动类 → 初始化 SpringApplication → 准备 Environment → 创建上下文 → 刷新上下文（加载配置、创建 Bean、启动服务器） → 执行 Runner → 完全运行
+```
+
+此版本补充了 `SpringApplication` 初始化、条件装配细节、事件机制及上下文刷新的完整阶段，修正了原始回答中较为模糊的环节。
 
 ## 约定大于配置
 
@@ -275,29 +226,17 @@ spring-boot封装SpringApplicationRunListener, 并封装SpringAppliction的引�
 
 默认读取配置文件 `application.properties` 或者 `application.yml` 中的配置信息，两种不同的文件类型，对应的内部配置方式也不太一样
 
-**配置文件位置**
-
-一般来说，默认的配置文件`application.properties`或者`application.yml`文件放在目录
-
-**properties格式**
-
-`properties`配置文件属于比较常见的一种了，定义也比较简单，形如 `key=value`
-
-**yml格式**
-
-`yml`格式的配置文件是以缩进来表示分层，`kv`之间用冒号来分割
-
 **配置读取**
 
 1. `Environment` 读取
    所有的配置信息，都会加载到`Environment`实体中，因此可以通过这个对象来获取系统的配置，通过这种方式不仅可以获取`application.yml`配置信息，还可以获取更多的系统信息
 
 2. `@Value` 注解方式
-   `@Value`注解可以将配置信息注入到`Bean`的属性，也是比较常见的使用方式，但有几点需要额外注意
-
-   如果配置信息不存在会怎样？
-   配置冲突了会怎样（即多个配置文件中有同一个key时）？
-   使用方式如下，主要是通过` ${}`，大括号内为配置的`Key`；如果配置不存在时，给一个默认值时，可以用冒号分割，后面为具体的值
+   `@Value`注解可以将配置信息注入到`Bean`的属性，但需要注意
+   - **如果配置信息不存在会报错**，可以在引用变量时给它赋一个默认值，以确保即使在未正确配值的情况下，程序依然能够正常运行。例如：@Value("${env.var:我是小富}")
+   - **@Value 注解加到静态变量上**，这样做是无法获取属性值的。静态变量是类的属性，并不属于对象的属性，而 Spring是基于对象的属性进行依赖注入的，类在应用启动时静态变量就被初始化，此时 Bean还未被实例化，因此不可能通过 @Value 注入属性值。
+   - **@Value 注解加到 final 关键字**上同样也无法获取属性值，因为 final 变量必须在构造方法中进行初始化，并且一旦被赋值便不能再次更改。而 @Value 注解是在 bean 实例化之后才进行属性注入的，因此无法在构造方法中初始化 final 变量
+   - 只有由 Spring 管理的 bean 中使用 @Value注解才会生效。而对于普通的POJO类，无法使用 @Value注解进行属性注入。
 
 3. 对象映射方式
 
@@ -353,6 +292,18 @@ public interface ApplicationRunner {
 - `CommandLineRunner`的方法参数是原始的参数，未做任何处理；
 - `ApplicationRunner`的参数为`ApplicationArguments`对象，是对原始参数的进一步封装。`ApplicationArguments`是对参数（主要针对`main`方法）做了进一步的处理，可以解析`--name=value`的参数，我们就可根据name获取value。
 
+## @SpringBootApplication注解
+
+是 Spring Boot 中的一个核心注解，它用于标识一个主要的 Spring Boot 应用程序类。
+
+1. **组合注解：**SpringBootApplication 实际上是一个组合注解，它包含了多个其他的注解，用于快速配置和启动一个 Spring Boot 应用程序。具体来说，它包括了以下三个注解的功能： 
+   - @SpringBootConfiguration：标识该类为 Spring Boot 配置类，类似于传统 Spring 的 @Configuration 注解。
+   - @EnableAutoConfiguration：启用自动配置，让 Spring Boot 根据类路径中的依赖来自动配置应用程序的各个组件。
+   - @ComponentScan：扫描当前包及其子包，查找带有 Spring 相关注解（如 @Component、@Service、@Controller 等）的类，将它们注册为 Spring 的 Bean。
+2. <font style="color:rgb(78, 84, 91);"> </font>**主程序入口：**在一个 Spring Boot 应用程序中，@SpringBootApplication 注解通常被标注在应用程序的主类上，即包含 main 方法的类。它是应用程序的入口点，通过执行 main 方法来启动 Spring Boot 应用。
+3. <font style="color:rgb(78, 84, 91);"> </font>**约定大于配置：**@SpringBootApplication 注解代表了 Spring Boot 的约定大于配置的思想。它默认会启用自动配置，扫描并注册需要的组件，从而使得应用程序的配置过程变得简单，并且能够快速搭建一个功能完备的 Spring Boot 应用。
+4. <font style="color:rgb(78, 84, 91);"> </font>**配置扩展：**<font style="color:rgb(78, 84, 91);">  </font>尽管 @SpringBootApplication 注解已经包含了许多默认的配置，你仍然可以在应用程序中添加自己的配置类、自定义 Bean 和其他相关组件，来进一步定制和扩展应用程序的行为。
+
 ## 自动配置原理
 
 Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。Spring Boot通过条件化配置（Conditional Configuration）和SPI（Service Provider Interface）机制，实现了一种基于约定优于配置的自动化配置策略。
@@ -362,6 +313,20 @@ Spring Boot的自动装配是通过`@EnableAutoConfiguration`注解实现的。S
 3. **spring.factories文件：** Spring Boot的自动配置信息通常是通过`META-INF/spring.factories`文件中的配置来定义的。这个文件位于项目的classpath下，其中包含了各种自动配置类的配置信息。每个自动配置类都会在`spring.factories`中定义一个`EnableAutoConfiguration`的键，指向该自动配置类的类路径。
 4. **SPI机制：** Spring Boot利用了Java的SPI（Service Provider Interface）机制。在`spring.factories`文件中，配置了各种自动配置类对应的`EnableAutoConfiguration`实现类。Spring Boot在启动时，会通过SPI机制加载这些实现类，并进行相应的自动配置。
 5. **自动配置类：** 自动配置类通常包含了一些`@Configuration`注解和`@Conditional`注解，以及各种`@Bean`定义。这些自动配置类的目的是根据条件判断是否需要自动配置一些Bean，以及如何配置这些Bean。
+
+## 可同时处理的请求数
+
+SpringBoot默认的内嵌容器是Tomcat，即程序实际上运行在Tomcat里。与其说SpringBoot可以处理多少请求，到不如说Tomcat可以处理多少请求。
+
+在SpringBoot中处理请求数量相关的参数有四个：
+
+
++ **server.tomcat.threads.min-spare**：最少的工作线程数，默认大小是10。该参数相当于长期工，如果并发请求的数量达不到10，就会依次使用这几个线程去处理请求。
++ **server.tomcat.threads.max**：最多的工作线程数，默认大小是200。该参数相当于临时工，如果并发请求的数量在10到200之间，就会使用这些临时工线程进行处理。
++ **server.tomcat.max-connections**：最大连接数，默认大小是8192。表示Tomcat可以处理的最大请求数量，超过8192的请求就会被放入到等待队列。
++ **server.tomcat.accept-count**：等待队列的长度，默认大小是100。
+
+也就是说，SpringBoot 同时所能处理的最大请求数量是 max-connections + accept-count，超过该数量的请求直接就会被丢掉。
 
 # 事务
 
@@ -415,6 +380,8 @@ Java中异常的基类为Throwable，有两个子类Exception与Errors。Runtime
 
 1. `Transactional`注解标注方法修饰符为非`public`时，`@Transactional`注解将会不起作用。
 
+   > Spring的事务代理通常是通过Java动态代理或CGLIB动态代理生成的，私有方法无法被代理，因此事务将无效。
+   >
    > 在`AbstractFallbackTransactionAttributeSource`类的`computeTransactionAttribute`方法中有个判断，如果目标方法不是public，则`TransactionAttribute`返回null，即不支持事务。
 
    <img src="https://gitee.com/qc_faith/picture/raw/master/image/202305301643911.png" alt="image-20230530164311839" style="zoom: 33%;" />
@@ -566,11 +533,28 @@ public class MyConfiguration implements MyInterface {
 
 1. 基于接口的 JDK 动态代理
 
-   JDK 动态代理是利用反射机制生成一个实现代理接口的匿名类，在调用具体方法前调用InvocationHandler 来处理。
+   JDK 动态代理通过反射机制生成一个实现目标接口的代理类，调用方法时通过 `InvocationHandler` 拦截处理。
 
 2. 基于继承的 CGLib 动态代理
 
-   CGLib 动态代理是利用asm开源包，对代理对象类的class文件加载进来，通过修改其字节码生成子类来处理。
+   CGLib 通过 ASM 字节码操作框架，生成目标类的子类作为代理类，重写父类方法实现代理逻辑。(无法代理 `final` 类或 `final` 方法)
+
+**从特性对比**：
+
+- JDK动态代理要求目标对象必须实现至少一个接口，因为它基于接口生成代理类。
+- CGLIB动态代理不依赖于目标对象是否实现接口，可以代理没有实现接口的类，它通过继承或者代理目标对象的父类来实现代理。
+
+**从创建代理时的性能对比**：
+
+- JDK动态代理通常比CGLIB动态代理创建速度更快，因为它不需要生成字节码文件。
+- JDK代理生成的代理类较小，占用较少的内存，而CGLIB生成的代理类通常较大，占用更多的内存。
+
+**从调用时的性能对比**：
+
+- 每次方法调用需通过反射（`Method.invoke`）执行，虽在 JDK 8+ 后反射性能优化显著，但仍低于直接调用。
+- 通过方法重写直接调用目标方法，无需反射，性能接近原生调用。在高频调用场景下显著优于 JDK 代理。
+
+Spring默认情况如果目标类实现了接口用JDK代理否则用CGLIB，可通过 `proxyTargetClass=true` 强制所有场景使用 CGLib。而SpringBoot默认用CGLIB，避免接口局限性带来的问题
 
 ### 静态代理
 
@@ -584,17 +568,18 @@ public class MyConfiguration implements MyInterface {
 
 ## AOP
 
-即面向切面编程，能够将那些与业务无关，却为业务模块所共同调用的逻辑或责任（例如事务处理、日志管理、权限控制等）封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可扩展性和可维护性。
+即面向切面编程，它通过在方法调用前、调用后或异常抛出时插入通知，允许开发者在核心业务逻辑之外执行横切关注点的代码。
 
 `Spring AOP`是基于动态代理的，如果要代理的对象实现了某个接口，那么`Spring AOP`就会使用`JDK`动态代理去创建代理对象；而对于没有实现接口的对象，使用`CGlib`动态代理生成一个被代理对象的子类来作为代理。
 
-<font color='Chestnut Red'>**`JDK`动态代理与`CGlib`动态代理的区别：**</font>
+**AOP底层实现分为两部分**：**创建AOP动态代理** 和 **调用代理**
 
-> `JDK`是基于反射机制，生成一个实现代理接口的匿名类，然后重写方法，实现方法的增强；它生成类的速度很快，但是运行时因为是基于反射，调用后续的类操作会很慢；而且他是只能针对接口编程的.
->
-> `CGLIB`是基于继承机制，继承被代理类，所以方法不要声明为`final`，然后重写父类方法达到增强了类的作用。它底层是基于`asm`第三方框架，是对代理对象类的`class`文件加载进来，通过修改其字节码生成子类来处理；生成类的速度慢，但是后续执行类的操作时候很快。可以针对类和接口.
->
-> 因为`jdk`是基于反射，`CGLIB`是基于字节码.所以性能上会有差异.
+1. 创建动态代理
+   1. 启动Spring时会创建动态代理，首先通过AspectJ解析切点表达式，它会根据定义的条件匹配目标Bean的方法。
+   2. 如果Bean不符合切点的条件，将跳过，否则将会通动态代理包装Bean对象：具体会根据目标对象是否实现接口来选择使用JDK动态代理或CGLIB代理。这使得AOP可以适用于各种类型的目标对象。
+2. 调用阶段
+   1. Spring AOP使用责任链模式来管理通知的执行顺序。通知拦截链包括前置通知、后置通知、异常通知、最终通知和环绕通知，它们按照配置的顺序形成链式结构。
+   2. 通知的有序执行：责任链确保通知按照预期顺序执行。前置通知在目标方法执行前执行，后置通知在目标方法成功执行后执行，异常通知在方法抛出异常时执行，最终通知无论如何都会执行，而环绕通知包裹目标方法，允许在方法执行前后添加额外的行为。
 
 <font color='Chestnut Red'>**应用场景**</font>
 
@@ -610,18 +595,10 @@ public class MyConfiguration implements MyInterface {
 
    - 编译时编织（特殊编译器实现）
   - 类加载时编织（特殊的类加载器实现）。
-  
 - 动态代理：运行时在内存中“临时”生成 AOP 动态代理类，因此也被称为运行时增强。 
 
-   - JDK 动态代理 
-    - JDK Proxy 是 Java 语言自带的功能，无需通过加载第三方类实现；
-    - Java 对 JDK Proxy 提供了稳定的支持，并且会持续的升级和更新，Java 8 版本中的 JDK Proxy 性能相比于之前版本提升了很多；
-    - JDK Proxy 是通过拦截器加反射的方式实现的；
-    - JDK Proxy 只能代理实现接口的类；
-    - JDK Proxy 实现和调用起来比较简单；
-  - CGLIB 
-    - CGLib 是第三方提供的工具，基于 ASM 实现的，性能比较高；
-    - CGLib 无需通过接口来实现，它是针对类实现代理，主要是对指定的类生成一个子类，它是通过实现子类的方式来完成调用的。
+   - JDK 动态代理 ：JDK Proxy 是 Java 语言自带的功能，通过拦截器加反射的方式实现的，只能代理实现接口的类；
+   - CGLIB：CGLib 是第三方提供的工具，基于 ASM 实现的，性能比较高；无需通过接口来实现，主要是对指定的类生成一个子类，通过实现子类的方式来完成调用。
 
 <font color='Chestnut Red'>**Spring AOP和AspectJ AOP有什么区别？**</font>
 
@@ -668,34 +645,34 @@ Spring AOP已经集成了AspectJ，AspectJ应该算得上是Java生态系统中�
 
 ### **依赖查找、依赖注入**
 
-依赖查找：主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
+- 依赖查找：主要是容器为组件提供一个回调接口和上下文环境。这样一来，组件就必须自己使用容器提供的API来查找资源和协作对象，控制反转仅体现在那些回调方法上，容器调用这些回调方法，从而应用代码获取到资源。
 
-> **特点**：
->
-> - 组件主动使用容器API获取依赖
-> - 组件与容器API耦合度较高
-> - 侵入性较强，改变了组件的编码方式
+  > **特点**：
+  >
+  > - 组件主动使用容器API获取依赖
+  > - 组件与容器API耦合度较高
+  > - 侵入性较强，改变了组件的编码方式
 
-~~~	java
-// 依赖查找方式
-ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
-UserService userService = (UserService) context.getBean("userService");
-userService.doSomething();
-~~~
+  ```java 
+  // 依赖查找方式
+  ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
+  UserService userService = (UserService) context.getBean("userService");
+  userService.doSomething();
+  ```
 
-依赖注入：组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
+- 依赖注入：组件不做定位查询，只提供标准的Java方法让容器去决定依赖关系。容器全权负责组件的装配，把符合依赖关系的对象通过Java Bean属性或构造方法传递给需要的对象。
 
-> 依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
->
-> **`IoC` 和 `DI` 的关系**： DI是IoC的一种重要实现策略，但IoC的实现不仅限于DI，还包括依赖查找等方式。在现代框架中，DI因其低侵入性和高可测试性，已成为IoC最主流的实现方式。
->
-> **`Spring`依赖注入方式**
->
-> - 注解注入方式
-> - set注入方式
-> - 构造器注入方式
->
-> 推荐使用<font color='Chestnut Red'>基于注解注入方式，配置较少，比较方便</font>。
+  > 依赖注入`（Dependency Injection，DI）`，是组件之间依赖关系由容器在运行期决定，即由容器动态的将某个依赖关系注入到组件之中。依赖注入的目的并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现。
+  >
+  > **`IoC` 和 `DI` 的关系**： DI是IoC的一种重要实现策略，但IoC的实现不仅限于DI，还包括依赖查找等方式。在现代框架中，DI因其低侵入性和高可测试性，已成为IoC最主流的实现方式。
+  >
+  > **`Spring`依赖注入方式**
+  >
+  > - 注解注入方式
+  > - set注入方式
+  > - 构造器注入方式
+  >
+  > 推荐使用<font color='Chestnut Red'>基于注解注入方式，配置较少，比较方便</font>。
 
 ### **IOC容器**
 
@@ -739,15 +716,13 @@ userService.doSomething();
 2. `populateBean`：进行依赖注入。
 3. `initializeBean`：初始化bean。
 
-Spring为了解决单例的循环依赖问题，使用了三级缓存：
+Spring为了解决单例的循环依赖问题，使用了三级缓存（三个Map）：
 
-`singletonObjects`：一级缓存；存储完整的 Bean 实例，bean name --> bean instance
+1. `singletonObjects`：一级缓存；存储完整的 Bean 实例，bean name --> bean instance
+2. `earlySingletonObjects`：二级缓存；存储的是实例化以后，但还没有设置属性值的 Bean 实例（还没做依赖注入），bean name --> bean instance
+3. `singletonFactories`： 三级缓存；存放 Bean 工厂，它主要用来生成原始 Bean 对象并且放到二级缓存里。同时，如果对象有Aop代理，则对象工厂返回代理对象。bean name --> ObjectFactory
 
-`earlySingletonObjects`：二级缓存；存储的是实例化以后，但还没有设置属性值的 Bean 实例（还没做依赖注入），bean name --> bean instance
-
-`singletonFactories`： 三级缓存；存放 Bean 工厂，它主要用来生成原始 Bean 对象并且放到二级缓存里。bean name --> ObjectFactory
-
-> 1. <font color='RedOrange'>只使用一级缓存</font>
+> 1. <font color='RedOrange'>只使用一级缓存</font>：如果只是循环依赖导致的死循环的问题： 一级缓存就可以解决 ，但是在并发下会获取到不完整的Bean。
 >
 > <font color='orange'>方法：</font>首先一级缓存是可以解决简单对象 A 与 B 之间相互依赖的，主要是存放半成品对象，在创建 A 时，不添加属性 B，直接放入缓存里面，在给属性 B 赋值时，就需要从缓存中获取 B，如果没有，就创建 B ，在创建 B 的时候要给它的属性 A 赋值，这时候就可以从缓存中获取 A 了。
 >
@@ -757,7 +732,7 @@ Spring为了解决单例的循环依赖问题，使用了三级缓存：
 >
 > 可以这样处理：从一级缓存获取对象处加一个互斥锁。而加互斥锁也带来了另一个问题，容器刷新完成后的普通获取 bean 的请求都需要竞争锁，如果这样处理，在高并发场景下使用 Spring 的性能一定会极低。
 >
-> 2. <font color='RedOrange'>只使用二级缓存</font>
+> 2. <font color='RedOrange'>只使用二级缓存</font>：可完全解决循环依赖：只是需要在实例化后就创建动态代理，不优雅也不符合spring生命周期规范。
 >
 > <font color='orange'>存在的问题 ：</font> 遇到 AOP 会有问题！Spring中AOP的实现是通过后置处理器方法：BeanPostProcessor机制来实现的，而后置处理器是在填充属性结束后才执行的。如果A需要被代理，由于二级缓存中的早期对象是原对象，而代理对象是在A初始化完成之后再创建的，这就导致了B对象中引用的A对象不是代理对象。
 >
@@ -827,6 +802,35 @@ Bean的完整生命周期经历了各种方法调用，这些方法可以划分�
 - **销毁**：
    - 执行DisposableBean的destroy方法；(或者执行有`@PreDestroy`注解的方法)
    - 执行自定义destroy-method
+
+## Spring中的设计模式：
+
+1. **工厂模式**
+   - **抽象工厂模式（Abstract Factory）**
+     **`BeanFactory` 和 `ApplicationContext`** 是 Spring 容器的基础接口，属于抽象工厂模式。它们定义了一组创建 Bean 的通用方法，具体实现（如 `DefaultListableBeanFactory`）负责生成不同类型的 Bean 实例，体现了抽象工厂中“生产一系列相关对象”的思想。
+   - **工厂方法模式（Factory Method）**
+     **`FactoryBean`** 接口是工厂方法模式的典型应用。通过实现 `FactoryBean`，用户可以自定义复杂对象的创建逻辑，由 Spring 容器调用 `getObject()` 方法生成目标 Bean。
+2. **单例模式（Singleton）**
+   - Spring 默认以单例作用域（`singleton`）管理 Bean，确保容器中每个 Bean 对应唯一实例，以提高性能和资源复用。
+3. **代理模式（Proxy）**
+   - Spring AOP 通过 **JDK 动态代理**（基于接口）和 **CGLIB 代理**（基于继承）实现切面功能，动态生成代理对象以增强目标方法。
+4. **观察者模式（Observer）**
+   - **事件驱动模型**：通过 `ApplicationEvent` 和 `ApplicationListener` 实现松耦合的事件发布与监听机制。例如，容器启动事件（`ContextRefreshedEvent`）可被监听并触发响应逻辑。
+5. **模板方法模式（Template Method）**
+   - **`JdbcTemplate`、`RestTemplate`** 等工具类封装了固定流程（如连接获取/释放），同时将可变部分（如 SQL 执行）以回调形式（`RowMapper`、`ResultSetExtractor`）交给用户扩展，符合模板方法模式。
+6. **策略模式（Strategy）**
+   - **`@ComponentScan` 中的过滤器**：通过 `includeFilters` 和 `excludeFilters` 定义组件扫描策略，允许灵活切换过滤规则。依赖注入时选择不同实现类（如 `@Qualifier`）也体现了策略模式。
+7. **装饰器模式（Decorator）**
+   - **`HttpServletRequestWrapper`** 等包装类：在 Spring Web 中，装饰器模式用于动态增强请求/响应对象的功能，而非直接修改原始对象。
+8. **责任链模式（Chain of Responsibility）**
+   - **AOP 的通知链**：如 `MethodInterceptor` 形成拦截器链，多个通知按顺序执行，责任链模式确保每个拦截器独立处理调用。
+   - **Spring Security 的过滤器链**：请求依次通过多个安全检查过滤器。
+9. **原型模式（Prototype）**
+   - 当 Bean 的作用域为 `prototype` 时，每次从容器获取的都是新实例，这是原型模式的应用。
+10. **建造者模式（Builder）**
+   - **`BeanDefinitionBuilder`**：用于逐步构造复杂的 `BeanDefinition` 对象，通过链式调用配置属性，解耦对象构造过程与表示形式。
+11. **适配器模式（Adapter）**
+    - **`HandlerAdapter`** 在 Spring MVC 中将不同类型的 Controller（如 `@Controller`、`HttpRequestHandler`）适配到统一的处理接口，使得多样化请求处理器能够以一致的方式工作。
 
 
 ## 面试题
